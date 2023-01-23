@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script defer src="alpine/alpine.min.js"></script>
+    <script defer src="copium.js"></script>
+    <!-- <script src="tailwindcss/tailwindcss_3_2_4.js"></script> -->
+    <link rel="stylesheet" href="style.css">
+    <title>test</title>
+</head>
+
+<body>
+    <div x-data="{open:1}" x-cloak class="cp-main-data-0ea9e2d3">
+        <div class="cp-main-c4898d02">
+            <header class="cp-header-dd32fa6e">
+                5Header
+                <div class="cp-close-a3243b52">
+                    <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="cp-close-svg-a8b1f124">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+            </header>
+            <div class="cp-content-11af01d1">
+                <label for="cp-area-bee11b14">Enter your paste to save.</label>
+                <textarea class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
+                    placeholder="type here...">
+                </textarea>
+            </div>
+            <footer class="cp-footer-e3165e9d" x-data="list">
+                <template x-for="s in streamers">
+                    <div>
+                        <div @click="select(s)" class="cp-list-72648db7">
+                            <span x-text="s">
+
+                            </span>
+                            <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                class="cp-arrow-svg-b6bb2e7a">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </div>
+                        <template x-data="emotes" x-for="ctx in context[active]">
+                            <div x-show="active == s">
+                                <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
+                                <div class="cp-msg-preview-8ee8c5b1">
+                                    <div class="user_container_087b8fa9"><span
+                                            class="username_preview_37582eb4">ilyushabledny</span><span
+                                            style="margin-right: 3px;">:</span>
+                                    </div><span class="emote_container_2fdf6c3d" x-html="parseEmotes(ctx.msg)"></span>
+                                </div>
+                                <br>
+                                <hr>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </footer>
+        </div>
+    </div>
+
+    <div style="position: absolute; z-index: 3000; left: 0; bottom: 0;">
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

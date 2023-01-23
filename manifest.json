@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "Copium",
+  "version": "1.0",
+  "description": "Simple save your twitch pastes and paste them LUL.",
+  "icons": {
+    "48": "icons/border-48.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.twitch.tv/*"
+      ],
+      "js": [
+        "alpine/alpine.min.js",
+        "css.js",
+        "copium.js",
+        "script.js"
+      ]
+    }
+  ]
+}
