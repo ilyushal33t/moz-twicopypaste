@@ -25,10 +25,23 @@
                 </div>
             </header>
             <div class="cp-content-11af01d1">
-                <label for="cp-area-bee11b14">Enter your paste to save.</label>
-                <textarea class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
-                    placeholder="type here...">
-                </textarea>
+                <div class="textarea-block-f382e8ac">
+                    <label for="cp-area-bee11b14">Enter your paste to save.</label>
+                    <textarea class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
+                        placeholder="type here...">
+                    </textarea>
+                    <input class="input-button-4a3582a6" type="button" value="Send" />
+                </div>
+                <div class="info-block-82670232">
+                    <div>
+                        <label for="username-input">Channel name</label>
+                        <input name="username-input" class="input-text-4a3582a6" type="text" />
+                    </div>
+                    <div>
+                        <label for="paste-name-input">Your paste name</label>
+                        <input name="paste-name-input" class="input-text-4a3582a6" type="text" />
+                    </div>
+                </div>
             </div>
             <footer class="cp-footer-e3165e9d" x-data="list">
                 <template x-for="s in streamers">
@@ -43,19 +56,22 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                             </svg>
                         </div>
-                        <template x-data="emotes" x-for="ctx in context[active]">
-                            <div x-show="active == s">
-                                <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                <div class="cp-msg-preview-8ee8c5b1">
-                                    <div class="user_container_087b8fa9"><span
-                                            class="username_preview_37582eb4">ilyushabledny</span><span
-                                            style="margin-right: 3px;">:</span>
-                                    </div><span class="emote_container_2fdf6c3d" x-html="parseEmotes(ctx.msg)"></span>
+                        <div class="data-container-673efd75">
+                            <template x-data="emotes" x-for="ctx in context[active]">
+                                <div x-show="active == s">
+                                    <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
+                                    <div class="cp-msg-preview-8ee8c5b1">
+                                        <div class="user_container_087b8fa9"><span
+                                                class="username_preview_37582eb4">ilyushabledny</span><span
+                                                style="margin-right: 3px;">:</span>
+                                        </div><span class="emote_container_2fdf6c3d"
+                                            x-html="parseEmotes(ctx.msg)"></span>
+                                    </div>
+                                    <br>
+                                    <hr>
                                 </div>
-                                <br>
-                                <hr>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
                     </div>
                 </template>
             </footer>
