@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script defer src="alpine/persist.js"></script>
     <script defer src="alpine/alpine.min.js"></script>
     <script defer src="copium.js"></script>
     <!-- <script src="tailwindcss/tailwindcss_3_2_4.js"></script> -->
@@ -13,7 +14,7 @@
 </head>
 
 <body>
-    <div x-data="{open:1}" x-cloak class="cp-main-data-0ea9e2d3">
+    <div x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
         <div class="cp-main-c4898d02">
             <header class="cp-header-dd32fa6e">
                 5Header
@@ -27,19 +28,21 @@
             <div class="cp-content-11af01d1">
                 <div class="textarea-block-f382e8ac">
                     <label for="cp-area-bee11b14">Enter your paste to save.</label>
-                    <textarea class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
+                    <textarea x-ref="textarea" class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
                         placeholder="type here...">
                     </textarea>
-                    <input class="input-button-4a3582a6" type="button" value="Send" />
+                    <input
+                        @click="savePaste({msg:$refs.textarea.value,name:$refs.pasteName.value}, $refs.username.value)"
+                        class="input-button-4a3582a6" type="button" value="Send" />
                 </div>
                 <div class="info-block-82670232">
                     <div>
-                        <label for="username-input">Channel name</label>
-                        <input name="username-input" class="input-text-4a3582a6" type="text" />
+                        <label for="username">Channel name</label>
+                        <input x-ref="username" name="username" class="input-text-4a3582a6" type="text" required />
                     </div>
                     <div>
-                        <label for="paste-name-input">Your paste name</label>
-                        <input name="paste-name-input" class="input-text-4a3582a6" type="text" />
+                        <label for="paste-name">Your paste name</label>
+                        <input x-ref="pasteName" name="paste-name" class="input-text-4a3582a6" type="text" required />
                     </div>
                 </div>
             </div>
@@ -60,9 +63,9 @@
                             <template x-data="emotes" x-for="ctx in context[active]">
                                 <div x-show="active == s">
                                     <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                    <div class="cp-msg-preview-8ee8c5b1">
-                                        <div class="user_container_087b8fa9"><span
-                                                class="username_preview_37582eb4">ilyushabledny</span><span
+                                    <div class="cp-msg-preview-8ee8c5b1" @click="saveToClipboard(ctx.msg)">
+                                        <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
+                                                x-text="$store.settings.username"></span><span
                                                 style="margin-right: 3px;">:</span>
                                         </div><span class="emote_container_2fdf6c3d"
                                             x-html="parseEmotes(ctx.msg)"></span>
@@ -75,13 +78,17 @@
                     </div>
                 </template>
             </footer>
+            <div id="saved-success-e48392b4" x-show="saved">
+                saved
+            </div>
         </div>
     </div>
 
     <div style="position: absolute; z-index: 3000; left: 0; bottom: 0;">
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js">
+    </script>
 </body>
 
 </html>

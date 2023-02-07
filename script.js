@@ -1,41 +1,50 @@
-document.addEventListener('alpine:init', () => {
-    Alpine.data('dropdown', () => ({
-        open: false,
-        toggle() {
-            this.open = !this.open;
-        },
-    }));
+document.addEventListener('alpine:init', async function () {
 
-    Alpine.store('settings', {
-        username: 'ilial33t',
-        posts: ['post1', 'post2']
-    })
+    Alpine.data('_main_', function () {
+        return {
+            settings: this.$persist(this.$store.settings || { username: 'c00ln1ckl33t' }),
+            pastesData: this.$persist(this.$store.pastesData || { streamers: [], context: {} }),
+            savePaste(paste, streamer) {
+                if (!paste.name.trim())
+                    paste.name = paste.msg.trim().split` `[0];
+                with (this.pastesData) {
 
-    Alpine.data('list', () => (
-        {
-            streamers: ['ilial33t', 'forsen'],
-            context: {
-                ilial33t: [
-                    {
-                        name: 'test name',
-                        msg: 'test p',
-                    },
-                    {
-                        name: 'test name2',
-                        msg: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassssssssssssssssssssssssssssssssss',
-                    },
-                ],
-                forsen: [
-                    {
-                        name: 'test name forsen',
-                        msg: 'test p forsen sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss  forsenBitrate  forsenBitrate  forsenBitrate  forsenBitrate  forsenBitrate asdadasdsad',
-                    },
-                    {
-                        name: 'dasd',
-                        msg: "test p forsen sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss PagMan PagMan PagMan PagMan PagMan asdadasdsad"
+                    if (!streamers.includes(streamer)) {
+                        streamers.push(streamer);
                     }
-                ]
+                    context[streamer]
+                        ? context[streamer].push({
+                            name: paste.name,
+                            msg: paste.msg,
+                        })
+                        : context[streamer] = [{
+                            name: paste.name,
+                            msg: paste.msg,
+                        }]
+                }
             },
+            saved: false,
+            showSaved() {
+                this.saved = true;
+                setTimeout(() => {
+                    this.saved = false;
+                }, 2e3);
+            },
+            async saveToClipboard(msg) {
+                await navigator.clipboard.writeText(msg);
+                this.showSaved();
+            },
+            init() {
+                Alpine.store('settings', this.settings);
+                Alpine.store('pastesData', this.pastesData);
+            },
+        }
+    });
+
+    Alpine.data('list', function () {
+        return {
+            streamers: this.$store.pastesData.streamers,
+            context: this.$store.pastesData.context,
             active: null,
             select(item) {
                 if (this.active == item)
@@ -43,17 +52,22 @@ document.addEventListener('alpine:init', () => {
                 this.active = item;
             }
         }
-    ));
+    });
 
-    Alpine.data('emotes', () => (
-        {
+    Alpine.data('emotes', function () {
+        return {
+            async getJSON(url) {
+                return (await fetch(url)).json()
+            },
             async fetchData() {
                 if (!this.loading) {
                     this.loading = true;
-                    this.global = await (await fetch('https://tw-emotes-api.onrender.com/globalemotes')).json();
-                    this.channelInfo = await (await fetch(`https://tw-emotes-api.onrender.com/full_user?name=forsen`)).json();
+                    this.globalEmotes = await this.getJSON('https://tw-emotes-api.onrender.com/globalemotes');
+
+                    this.channelInfo = await this.getJSON(`https://tw-emotes-api.onrender.com/full_user?name=forsen`);
+
                     this.channelEmotes = this.channelInfo.emotes;
-                    this.allEmotes = [].concat(...Object.values(this.channelEmotes).concat(Object.values(this.global)))
+                    this.allEmotes = [].concat(...Object.values(this.channelEmotes).concat(Object.values(this.globalEmotes)))
                     this._regexp = this.allEmotes.map(e =>
                         e.name.replace(/[\\\/\)\(\;\:\>\<\_\-\+\}\{\[\]\.\?\|]/gm, e => `\\${e}`).replace(/^.*$/gmi, e => `^ *${e} *$`)
                     ).join`|`;
@@ -73,12 +87,12 @@ document.addEventListener('alpine:init', () => {
             },
             parseEmotes(msg) {
                 if (this.loading) {
-                    setTimeout(() => this.parseEmotes(msg), 2e3);
+                    setTimeout(() => this.parseEmotes(msg), 4e3);
                     return msg;
                 }
                 return msg.split` `.map(m => m.replace(this._regexp, e => this.createEmote(e, this.allEmotes.find(a => a.name == e.replace(/ /g, '')).image1x)))
                     .map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join` `.replace(/\#\#\# *[ ]/g, '');
             }
         }
-    ));
+    });
 })
