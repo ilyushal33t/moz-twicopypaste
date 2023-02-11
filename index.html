@@ -7,7 +7,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script defer src="alpine/persist.js"></script>
     <script defer src="alpine/alpine.min.js"></script>
-    <script defer src="copium.js"></script>
+    <script src="script.js"></script>
+    <script>
+        window.onload = function () {
+            dragElement(document.querySelector('div.cp-main-data-0ea9e2d3'));
+        }
+
+        function dragElement(elmnt) {
+            /* 
+                https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
+            */
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0, header = document.querySelector('header.cp-header-dd32fa6e');
+            if (header) {
+                header.onmousedown = dragMouseDown;
+            } else {
+                elmnt.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+    </script>
     <!-- <script src="tailwindcss/tailwindcss_3_2_4.js"></script> -->
     <link rel="stylesheet" href="style.css">
     <title>test</title>
@@ -17,6 +59,14 @@
     <div x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
         <div class="cp-main-c4898d02">
             <header class="cp-header-dd32fa6e">
+                <div @click="settingsModalShow=!0" class="cp-settings-a3243b52">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="cp-settings-svg-a8b1f124">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
                 5Header
                 <div class="cp-close-a3243b52">
                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -28,9 +78,8 @@
             <div class="cp-content-11af01d1">
                 <div class="textarea-block-f382e8ac">
                     <label for="cp-area-bee11b14">Enter your paste to save.</label>
-                    <textarea x-ref="textarea" class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
-                        placeholder="type here...">
-                    </textarea>
+                    <textarea maxlength="500" x-ref="textarea" class="cp-area-bee11b14" name="cp-area-bee11b14"
+                        id="cp-area-bee11b14" placeholder="type here..."></textarea>
                     <input
                         @click="savePaste({msg:$refs.textarea.value,name:$refs.pasteName.value}, $refs.username.value)"
                         class="input-button-4a3582a6" type="button" value="Send" />
@@ -49,26 +98,43 @@
             <footer class="cp-footer-e3165e9d" x-data="list">
                 <template x-for="s in streamers">
                     <div>
-                        <div @click="select(s)" class="cp-list-72648db7">
+                        <div @click="select(s)" class="cp-list-72648db7" x-data="{uid:generateUID()}" :id="uid">
+                            <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
+                                <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                    class="cp-close-svg-a8b1f124">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
                             <span x-text="s">
 
                             </span>
-                            <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                class="cp-arrow-svg-b6bb2e7a">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                            </svg>
+                            <div class="cp-arrow-svg-b6bb2e7a">
+                                <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
+                            </div>
                         </div>
                         <div class="data-container-673efd75">
                             <template x-data="emotes" x-for="ctx in context[active]">
-                                <div x-show="active == s">
+                                <div x-show="active == s" style="position: relative;">
                                     <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                    <div class="cp-msg-preview-8ee8c5b1" @click="saveToClipboard(ctx.msg)">
+                                    <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePaste_"
+                                        class="cp-msg-preview-8ee8c5b1">
                                         <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
-                                                x-text="$store.settings.username"></span><span
+                                                x-text="$store.settings.username.val"></span><span
                                                 style="margin-right: 3px;">:</span>
                                         </div><span class="emote_container_2fdf6c3d"
                                             x-html="parseEmotes(ctx.msg)"></span>
+                                    </div>
+                                    <div class="cp-close-a3243b52" @click="deletePaste(active, ctx.uid, uid)">
+                                        <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
                                     </div>
                                     <br>
                                     <hr>
@@ -82,13 +148,40 @@
                 saved
             </div>
         </div>
-    </div>
 
-    <div style="position: absolute; z-index: 3000; left: 0; bottom: 0;">
-    </div>
+        <template x-teleport="body">
+            <div x-show="settingsModalShow" x-cloak class="modal-over-4a348d16">
 
-    <script src="script.js">
-    </script>
+                <div x-show="settingsModalShow" @click.outside="settingsModalShow=!1" class="modal-body-50cb404c"
+                    x-transition:leave>
+                    <header class="modal-head-4a348d16">
+                        <h2>Settings</h2>
+                    </header>
+                    <main class="modal-content-4a348d16">
+                        <template x-for="[key, val] in Object.entries(settings)">
+                            <template x-if="val.workingStatus">
+                                <div>
+                                    <span x-text="key + ':'"></span>
+                                    <input :name="key" class="settings-input-031f6120" :type="val.type"
+                                        :value="val.val">
+                                </div>
+                            </template>
+                        </template>
+                    </main>
+                    <footer class="modal-footer-4a348d16">
+                        <button @click="modalSettingsSave"
+                            class="inline-flex items-center py-2 px-3 bg-emerald-600 hover:bg-opacity-95 text-white rounded-md shadow mr-2">
+                            Accept
+                        </button>
+                        <button @click="settingsModalShow=!1"
+                            class="inline-flex items-center py-2 px-3 bg-gray-100 hover:bg-opacity-95 text-black rounded-md shadow">
+                            Cancel
+                        </button>
+                    </footer>
+                </div>
+            </div>
+        </template>
+    </div>
 </body>
 
 </html>

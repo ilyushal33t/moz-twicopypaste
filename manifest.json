@@ -12,10 +12,8 @@
         "*://*.twitch.tv/*"
       ],
       "js": [
-        "alpine/alpine.min.js",
         "css.js",
-        "copium.js",
-        "script.js"
+        "copium.js"
       ]
     }
   ]
