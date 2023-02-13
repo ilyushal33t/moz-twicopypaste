@@ -1,25 +1,52 @@
 var loaded = false;
+
 const createScript = (src) => {
     let script = document.createElement('script');
     script.setAttribute('defer', 'defer');
     script.src = src;
     document.head.appendChild(script);
+
+    return script;
 }
-createScript(browser.runtime.getURL('alpine/alpine.min.js'));
-createScript(browser.runtime.getURL('alpine/persist.js'))
-createScript(browser.runtime.getURL('script.js'));
+
+const $style = document.createElement('style');
+$style.innerHTML = css;
+document.head.append($style);
+
+with (browser.runtime) {
+    createScript(getURL('alpine/alpine.min.js'));
+    createScript(getURL('alpine/persist.js'));
+
+    var MAINJS = createScript(getURL('script.js'));
+
+    // MAINJS.onload = async function () {
+    //     await new Promise(r => setTimeout(r, 1e3));
+    //     alert('asd')
+    //     alert(window.__createEmote('1984', 'https://cdn.7tv.app/emote/60b2654203982475b83b1346/1x.webp'))
+    // };
+}
+
 window.onanimationend = async function () {
     if (loaded) return;
     loaded = true;
-    const $main = document.querySelector('.Layout-sc-1xcs6mc-0.dajtya');
-    const $elem = document.createElement('div');
 
-    const $style = document.createElement('style');
+    // const $main = document.querySelector('.Layout-sc-1xcs6mc-0.dajtya');
+    const $main = document.querySelector('div#root');
+    const $elem = document.createElement('div');
+    const $underChatGUI = document.querySelector('.Layout-sc-1xcs6mc-0.XTygj.chat-input__buttons-container > .Layout-sc-1xcs6mc-0.hOyRCN');
+    const $settingsBtn = $underChatGUI.firstChild;
+    const $openButton = document.createElement('button');
+
+    $openButton.innerHTML = 'loading';
+    $openButton.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
+
+    $underChatGUI.insertBefore($openButton, $settingsBtn)
+
     $elem.innerHTML = `
-    <div x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
+      <div x-show="_mainWindowShow__" x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
         <div class="cp-main-c4898d02">
             <header class="cp-header-dd32fa6e">
-                <div class="cp-settings-a3243b52">
+                <div @click="settingsModalShow=!0" class="cp-settings-a3243b52">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="cp-settings-svg-a8b1f124">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -28,7 +55,7 @@ window.onanimationend = async function () {
                     </svg>
                 </div>
                 5Header
-                <div class="cp-close-a3243b52">
+                <div @click="_closeMain__" class="cp-close-a3243b52">
                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="cp-close-svg-a8b1f124">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -37,11 +64,11 @@ window.onanimationend = async function () {
             </header>
             <div class="cp-content-11af01d1">
                 <div class="textarea-block-f382e8ac">
-                    <label for="cp-area-bee11b14">Enter your paste to save.</label>
-                    <textarea x-ref="textarea" class="cp-area-bee11b14" name="cp-area-bee11b14" id="cp-area-bee11b14"
-                        placeholder="type here..."></textarea>
+                    <label for="cp-area-bee11b14">Enter your pasta to save.</label>
+                    <textarea spellcheck="false" maxlength="500" x-ref="textarea" class="cp-area-bee11b14"
+                        name="cp-area-bee11b14" id="cp-area-bee11b14" placeholder="type here..."></textarea>
                     <input
-                        @click="savePaste({msg:$refs.textarea.value,name:$refs.pasteName.value}, $refs.username.value)"
+                        @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.username.value) ? log('added to ' + $refs.username.value.toLowerCase()) : alert('user with this name does not exist.')"
                         class="input-button-4a3582a6" type="button" value="Send" />
                 </div>
                 <div class="info-block-82670232">
@@ -50,34 +77,51 @@ window.onanimationend = async function () {
                         <input x-ref="username" name="username" class="input-text-4a3582a6" type="text" required />
                     </div>
                     <div>
-                        <label for="paste-name">Your paste name</label>
-                        <input x-ref="pasteName" name="paste-name" class="input-text-4a3582a6" type="text" required />
+                        <label for="pasta-name">Your pasta name</label>
+                        <input x-ref="pastaName" name="pasta-name" class="input-text-4a3582a6" type="text" required />
                     </div>
                 </div>
             </div>
             <footer class="cp-footer-e3165e9d" x-data="list">
-                <template x-for="s in streamers">
-                    <div>
-                        <div @click="select(s)" class="cp-list-72648db7">
-                            <span x-text="s">
+                <template x-for="s in streamers" :key="s">
+                    <div x-data="{uid:generateUID()}">
+                        <div @click="select(s)" class="cp-list-72648db7" :id="uid">
+                            <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
+                                <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                    class="cp-close-svg-a8b1f124">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <span :id="uid" x-text="s">
 
                             </span>
-                            <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                class="cp-arrow-svg-b6bb2e7a">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                            </svg>
+                            <div class="cp-arrow-svg-b6bb2e7a">
+                                <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
+                            </div>
                         </div>
                         <div class="data-container-673efd75">
                             <template x-data="emotes" x-for="ctx in context[active]">
-                                <div x-show="active == s">
+                                <div x-show="active == s" style="position: relative;">
                                     <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                    <div x-bind="_savePaste_" class="cp-msg-preview-8ee8c5b1">
+                                    <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePasta_"
+                                        class="cp-msg-preview-8ee8c5b1">
                                         <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
-                                                x-text="$store.settings.username"></span><span
+                                                x-text="$store.settings.username.val"></span><span
                                                 style="margin-right: 3px;">:</span>
                                         </div><span class="emote_container_2fdf6c3d"
-                                            x-html="parseEmotes(ctx.msg)"></span>
+                                            x-html="parseEmotes(ctx.msg, active)"></span>
+                                    </div>
+                                    <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid, uid)">
+                                        <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
                                     </div>
                                     <br>
                                     <hr>
@@ -92,25 +136,31 @@ window.onanimationend = async function () {
             </div>
         </div>
 
-        <template x-teleport="body" x-ignore>
-            <div x-show="open" class="modal-over-4a348d16">
+        <template x-teleport="body">
+            <div x-show="settingsModalShow" x-cloak class="modal-over-4a348d16">
 
-                <div x-show="open" x-transition @click.outside="open=!1" class="w-[90%] md:w-1/2 bg-white rounded-lg"
-                    x-transition>
+                <div x-show="settingsModalShow" @click.outside="settingsModalShow=!1" class="modal-body-50cb404c"
+                    x-transition:leave>
                     <header class="modal-head-4a348d16">
-                        <h2>Modal Title</h2>
+                        <h2>Settings</h2>
                     </header>
                     <main class="modal-content-4a348d16">
-                        Modal Content
+                        <template x-for="[key, val] in Object.entries(settings)">
+                            <template x-if="val.workingStatus">
+                                <div>
+                                    <span x-text="key + ':'"></span>
+                                    <input :name="key" class="settings-input-031f6120" :type="val.type"
+                                        :value="val.val">
+                                </div>
+                            </template>
+                        </template>
                     </main>
                     <footer class="modal-footer-4a348d16">
-                        <button @click="accept"
-                            class="inline-flex items-center py-2 px-3 bg-emerald-600 hover:bg-opacity-95 text-white rounded-md shadow mr-2">
-                            Accept
+                        <button @click="modalSettingsSave" class="cp-btn cp-btn-modal-save">
+                            Save
                         </button>
-                        <button @click="open=!1"
-                            class="inline-flex items-center py-2 px-3 bg-gray-100 hover:bg-opacity-95 text-black rounded-md shadow">
-                            Cancel
+                        <button @click="settingsModalShow=!1" class="cp-btn cp-btn-modal-close">
+                            Close
                         </button>
                     </footer>
                 </div>
@@ -118,54 +168,58 @@ window.onanimationend = async function () {
         </template>
     </div>`.slice(1);
 
-    $style.innerHTML = css;
-    document.head.append($style);
     $main.insertBefore($elem, $main.firstChild);
 
-    // const input = document.querySelector('#myInput');
-    // const container = document.querySelector('#container')
-    // const list = document.querySelector('ul');
-    // const submit = document.querySelector('#add_button')
-    // const __emotes = {};
+    __dragElement(document.querySelector('div.cp-main-data-0ea9e2d3'), document.querySelector('header.cp-header-dd32fa6e'));
 
+}
 
-    dragElement(document.querySelector('div.cp-main-data-0ea9e2d3'), document.querySelector('header.cp-header-dd32fa6e'));
-
-    function dragElement(elmnt, header) {
-        /* 
-            https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
-        */
-        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        if (header) {
-            header.onmousedown = dragMouseDown;
-        } else {
-            elmnt.onmousedown = dragMouseDown;
-        }
-
-        function dragMouseDown(e) {
-            e = e || window.event;
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e) {
-            e = e || window.event;
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
+function __dragElement(elmnt, header) {
+    /* 
+        https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
+    */
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    if (header) {
+        header.onmousedown = dragMouseDown;
+    } else {
+        elmnt.onmousedown = dragMouseDown;
     }
 
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.oncontextmenu = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        elmnt.offsetBottom = elmnt.offsetTop - window.innerHeight + elmnt.offsetHeight;
+        elmnt.offsetRight = elmnt.offsetLeft - window.innerWidth + elmnt.offsetWidth;
+        elmnt.offsetTop < 10
+            ? (elmnt.style.top = '10px')
+            : elmnt.offsetBottom > -2
+                ? (elmnt.style.top = window.innerHeight - elmnt.offsetHeight - 10 + 'px')
+                : elmnt.offsetLeft < 2
+                    ? (elmnt.style.left = '10px')
+                    : elmnt.offsetRight > -2
+                        ? (elmnt.style.left = window.innerWidth - elmnt.offsetWidth - 10 + 'px')
+                        : void 0;
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
 }

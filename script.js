@@ -1,11 +1,9 @@
+var DEBUG = true;
+
 document.addEventListener('alpine:init', async function () {
 
-    //TODO: 
-    // test if twitch user exists 
-    // bug with deleting
-
     function log(msg) {
-        console.info(`%c[CopyPaste] %c${msg}`, 'color: #9858FF', `color: #00B642`)
+        console.info(`%c[CopyPasta] %c${msg}`, 'color: #9858FF', `color: #00B642`)
     }
     log.error = console.error;
 
@@ -15,7 +13,7 @@ document.addEventListener('alpine:init', async function () {
             val: 'c00ln1ckl33t',
             workingStatus: true,
         },
-        savePasteMethod: {
+        savePastaMethod: {
             type: 'select',
             val: 'click',
             workingStatus: false,
@@ -26,45 +24,56 @@ document.addEventListener('alpine:init', async function () {
             workingStatus: false,
         }
     };
-    var defaultPastesData = {
+    var defaultPastasData = {
         streamers: [],
         context: {},
     };
 
     Alpine.data('_main_', function () {
         return {
+            log: log,
             settings: this.$persist(this.$store.settings || defaultSettings),
-            pastesData: this.$persist(this.$store.pastesData || defaultPastesData),
-            savePaste(paste, streamer) {
+            pastasData: this.$persist(this.$store.pastasData || defaultPastasData),
+            async savePasta(pasta, streamer) {
                 try {
-                    if (!paste.name.trim())
-                        paste.name = paste.msg.trim().split` `[0];
-                    if (!streamer.trim())
-                        streamer = 'global';
-                    with (this.pastesData) {
-                        if (!streamers.includes(streamer)) {
-                            streamers.push(streamer);
+                    streamer = streamer.toLowerCase();
+                    if (this.pastasData.streamers.includes(streamer) || await this.twitchUserExists(streamer)) {
+                        if (!pasta.name.trim())
+                            pasta.name = pasta.msg.trim().split` `[0];
+                        if (!streamer.trim())
+                            streamer = 'global';
+                        with (this.pastasData) {
+                            if (!streamers.includes(streamer)) {
+                                streamers.push(streamer);
+                            }
+                            context[streamer]
+                                ? context[streamer].push({
+                                    name: pasta.name,
+                                    msg: pasta.msg,
+                                    uid: crypto.randomUUID(),
+                                })
+                                : context[streamer] = [{
+                                    name: pasta.name,
+                                    msg: pasta.msg,
+                                    uid: crypto.randomUUID(),
+                                }]
                         }
-                        context[streamer]
-                            ? context[streamer].push({
-                                name: paste.name,
-                                msg: paste.msg,
-                                uid: crypto.randomUUID(),
-                            })
-                            : context[streamer] = [{
-                                name: paste.name,
-                                msg: paste.msg,
-                                uid: crypto.randomUUID(),
-                            }]
-                    }
+                    } else { return false; }
                 } catch (e) { log.error(e); }
+                return true;
             },
             settingsModalShow: false,
             modalSettingsSave() {
+                this.settingsModalShow = false;
                 [...document.querySelectorAll('.settings-input-031f6120')]
                     .forEach(el => {
                         this.settings[el.name].val = el.value;
                     })
+                this.showSaved();
+            },
+            _mainWindowShow__: DEBUG,
+            _closeMain__() {
+                this._mainWindowShow__ = !this._mainWindowShow__;
             },
             saved: false,
             showSaved() {
@@ -77,31 +86,40 @@ document.addEventListener('alpine:init', async function () {
                 await navigator.clipboard.writeText(msg);
                 this.showSaved();
             },
-            deletePaste(streamer, uid, streamerUID) {
-                let ctx = this.pastesData.context[streamer];
-                if (this.pastesData.context[streamer].length < 2)
+            deletePasta(streamer, uid, streamerUID) {
+                let ctx = this.pastasData.context[streamer];
+                if (this.pastasData.context[streamer].length < 2)
                     this.deleteStreamer(streamer, streamerUID);
                 else
-                    this.pastesData.context[streamer] = ctx.filter((_, i) => i != ctx.map(e => e.uid).indexOf(uid));
+                    // console.log(ctx.map(e => e.uid).indexOf(uid))
+                    this.pastasData.context[streamer].splice(ctx.map(e => e.uid).indexOf(uid), 1);
 
             },
             deleteStreamer(streamer, uid, pr = false) {
-                if (!pr) pr = confirm('Are you sure you want to delete this streamer and pastes for him?');
-                if (pr) {
-                    this.pastesData.streamers = this.pastesData.streamers.filter((_, i) => i != this.pastesData.streamers.indexOf(streamer))
-                    delete this.pastesData.context[streamer];
-                    document.querySelector('#' + uid).remove();
+                if (!pr) {
+                    let startTime = new Date().getTime();
+                    pr = confirm('Are you sure you want to delete this streamer and pastas for him?');
+                    let endTime = new Date().getTime();
+                    if (endTime - startTime < 50) pr = true;
                 }
+                console.log(window.confirm.toString())
+                if (pr) {
+                    this.pastasData.streamers.splice(this.pastasData.streamers.indexOf(streamer), 1)
+                    delete this.pastasData.context[streamer];
+                }
+                return pr;
             },
-            generateUID() {
-                return 'cp-' + crypto.randomUUID();
+            async twitchUserExists(streamer) {
+                let url = `https://tw-emotes-api.onrender.com/user?name=${streamer}`;
+
+                return typeof await (await fetch(url)).json() === 'object';
             },
             init() {
                 log('inited');
                 Alpine.store('settings', this.settings);
-                Alpine.store('pastesData', this.pastesData);
+                Alpine.store('pastasData', this.pastasData);
 
-                Alpine.bind('_savePaste_', async function () {
+                Alpine.bind('_savePasta_', async function () {
                     const binds = {};
                     return binds;
                 }.bind(this));
@@ -111,8 +129,8 @@ document.addEventListener('alpine:init', async function () {
 
     Alpine.data('list', function () {
         return {
-            streamers: this.$store.pastesData.streamers,
-            context: this.$store.pastesData.context,
+            streamers: this.$store.pastasData.streamers,
+            context: this.$store.pastasData.context,
             active: null,
             select(item) {
                 if (this.active == item)
@@ -134,37 +152,84 @@ document.addEventListener('alpine:init', async function () {
                     await this.fillStreamersInfoAsync(this.channelsInfo);
 
 
-                    this.channelsEmotes = this.channelsInfo.map(e => ({ [e.user.broadcaster_login]: e.emotes }));
-                    this.mergedChannelsEmotes = this.deepObjectValuesMerge(this.channelsEmotes)
+                    this.channelsEmotesArr = this.channelsInfo
+                        .map(e => ({ [e.user.broadcaster_login]: e.emotes }));
 
-                    console.log(this.mergedChannelsEmotes);
+                    this.channelsEmotesObj = this.channelsEmotesArr.reduce((acc, v) => {
+                        const [k, reg] = Object.entries(v)[0]
+                        acc[k] = [].concat(...Object.values(reg));
+                        return acc;
+                    }, {});
 
-                    this.allEmotes = [].concat(...Object.values(this.mergedChannelsEmotes).concat(Object.values(this.globalEmotes)))
-                    this._regexp = this.allEmotes.map(e =>
+                    this.mergedChannelsEmotes = this.deepObjectValuesMerge(this.channelsEmotesArr)
+
+                    this._regexp_CHANNELS = this.channelsEmotesArr
+                        .map(e => Object.entries(e)
+                            .map(([k, v]) => ({
+                                [k]: new RegExp(
+                                    Object.values(v)
+                                        .map(e =>
+                                            e.map(e =>
+                                                e.name.replace(/[\\\/\)\(\;\:\>\<\_\-\+\}\{\[\]\.\?\|]/gm, e => `\\${e}`)
+                                                    .replace(/^.*$/gmi, e => `^ *${e} *$`)
+                                            ).join`|`
+                                        )
+                                    , 'gm'
+                                )
+                            })
+                            )).reduce((acc, v) => {
+                                const [k, reg] = Object.entries(v[0])[0]
+                                acc[k] = reg;
+                                return acc;
+                            }, {});
+
+
+                    this.allGlobalEmotes = [].concat(...Object.values(this.globalEmotes))//[].concat(...Object.values(this.mergedChannelsEmotes).concat(Object.values(this.globalEmotes)))
+                    this._regexp_GLOBAL = this.allGlobalEmotes.map(e =>
                         e.name.replace(/[\\\/\)\(\;\:\>\<\_\-\+\}\{\[\]\.\?\|]/gm, e => `\\${e}`).replace(/^.*$/gmi, e => `^ *${e} *$`)
                     ).join`|`;
-                    this._regexp = new RegExp(this._regexp, 'gm');
-                    log('loaded emotes');
+                    this._regexp_GLOBAL = new RegExp(this._regexp_GLOBAL, 'gm');
+                    log('emotes loaded');
                     this.loading = null;
                     return;
                 }
             },
             async init() {
+                window.__createEmote = this.createEmote;
                 await this.fetchData();
             },
             createEmote(alt, src) {
-                return `<span class="emote_container_2fdf6c3d b253c65b" :style="{minWidth: ($refs.img.width || 28) + 'px'}"><span>
-                <img x-ref="img" style="max-width: 100%; position:absolute;" alt='${alt}' src='${src}'/></span></span>`;
+                const img = new Image();
+                const spanA = document.createElement('span'),
+                    spanB = document.createElement('span');
+                const uid = generateUID();
+                // <span class="emote_container_2fdf6c3d b253c65b" :style="{minWidth: 28 + 'px'}"><span>
+                spanA.setAttribute('class', 'emote_container_2fdf6c3d b253c65b');
+                spanA.id = uid;
+                img.src = src;
+                img.id = uid;
+                img.style = 'max-width: 100%; position:absolute;';
+                img.alt = alt;
+                spanA.appendChild(spanB);
+                spanB.appendChild(img);
+                img.onload = function () {
+                    document.querySelector('span#' + uid).setAttribute('style', 'min-width: ' + img.width + 'px')
+                };
+                return spanA.outerHTML;
             },
-            parseEmotes(msg) {
+            parseEmotes(msg, streamer) {
                 try {
+                    if (streamer == void 0) return;
                     if (msg.slice(-1) != ' ')
                         msg += ' ';
                     if (this.loading) {
                         setTimeout(() => this.parseEmotes(msg), 4e3);
                         return msg;
                     }
-                    return msg.split` `.map(m => m.replace(this._regexp, e => this.createEmote(e, this.allEmotes.find(a => a.name == e.replace(/ /g, '')).image1x)))
+                    return msg.split` `.map(m =>
+                        m.replace(this._regexp_GLOBAL, e => this.createEmote(e, this.allGlobalEmotes.find(a => a.name == e.replace(/ /g, '')).image1x))
+                            .replace(this._regexp_CHANNELS[streamer], e => this.createEmote(e, this.channelsEmotesObj[streamer].find(a => a.name == e.replace(/ /g, '')).image1x))
+                    )
                         .map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join` `.replace(/\#\#\# *[ ]/g, '');
                 } catch (e) { log.error(e) };
             },
@@ -179,7 +244,7 @@ document.addEventListener('alpine:init', async function () {
             },
             async getJSON(url, params) {
                 if (params !== void 0 && typeof params === 'object') {
-                    url += '?' + Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&');
+                    url += '?' + Object.entries(params).map(([key, value]) => `${key}=${value} `).join('&');
                 }
                 try {
                     return (await fetch(url)).json()
@@ -189,7 +254,7 @@ document.addEventListener('alpine:init', async function () {
                 }
             },
             async fillStreamersInfoAsync(arr) {
-                await Promise.all(this.$store.pastesData.streamers
+                await Promise.all(this.$store.pastasData.streamers
                     .map(async (streamer) =>
                         await this.getJSON('https://tw-emotes-api.onrender.com/full_user', { name: streamer })))
                     .then(data => {
@@ -202,3 +267,7 @@ document.addEventListener('alpine:init', async function () {
         }
     });
 })
+
+function generateUID() {
+    return 'cp-' + crypto.randomUUID();
+}

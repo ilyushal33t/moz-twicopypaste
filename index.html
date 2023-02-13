@@ -24,18 +24,31 @@
                 elmnt.onmousedown = dragMouseDown;
             }
 
+
             function dragMouseDown(e) {
                 e = e || window.event;
                 e.preventDefault();
                 pos3 = e.clientX;
                 pos4 = e.clientY;
                 document.onmouseup = closeDragElement;
+                document.oncontextmenu = closeDragElement;
                 document.onmousemove = elementDrag;
             }
 
             function elementDrag(e) {
                 e = e || window.event;
                 e.preventDefault();
+                elmnt.offsetBottom = elmnt.offsetTop - window.innerHeight + elmnt.offsetHeight;
+                elmnt.offsetRight = elmnt.offsetLeft - window.innerWidth + elmnt.offsetWidth;
+                elmnt.offsetTop < 10
+                    ? (elmnt.style.top = '10px')
+                    : elmnt.offsetBottom > -2
+                        ? (elmnt.style.top = window.innerHeight - elmnt.offsetHeight - 10 + 'px')
+                        : elmnt.offsetLeft < 2
+                            ? (elmnt.style.left = '10px')
+                            : elmnt.offsetRight > -2
+                                ? (elmnt.style.left = window.innerWidth - elmnt.offsetWidth - 10 + 'px')
+                                : void 0;
                 pos1 = pos3 - e.clientX;
                 pos2 = pos4 - e.clientY;
                 pos3 = e.clientX;
@@ -56,7 +69,8 @@
 </head>
 
 <body>
-    <div x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
+
+    <div x-show="_mainWindowShow__" x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
         <div class="cp-main-c4898d02">
             <header class="cp-header-dd32fa6e">
                 <div @click="settingsModalShow=!0" class="cp-settings-a3243b52">
@@ -68,7 +82,7 @@
                     </svg>
                 </div>
                 5Header
-                <div class="cp-close-a3243b52">
+                <div @click="_closeMain__" class="cp-close-a3243b52">
                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="cp-close-svg-a8b1f124">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -77,11 +91,11 @@
             </header>
             <div class="cp-content-11af01d1">
                 <div class="textarea-block-f382e8ac">
-                    <label for="cp-area-bee11b14">Enter your paste to save.</label>
-                    <textarea maxlength="500" x-ref="textarea" class="cp-area-bee11b14" name="cp-area-bee11b14"
-                        id="cp-area-bee11b14" placeholder="type here..."></textarea>
+                    <label for="cp-area-bee11b14">Enter your pasta to save.</label>
+                    <textarea spellcheck="false" maxlength="500" x-ref="textarea" class="cp-area-bee11b14"
+                        name="cp-area-bee11b14" id="cp-area-bee11b14" placeholder="type here..."></textarea>
                     <input
-                        @click="savePaste({msg:$refs.textarea.value,name:$refs.pasteName.value}, $refs.username.value)"
+                        @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.username.value) ? log(`added to ${$refs.username.value.toLowerCase()}`) : alert('user with this name does not exist.')"
                         class="input-button-4a3582a6" type="button" value="Send" />
                 </div>
                 <div class="info-block-82670232">
@@ -90,15 +104,15 @@
                         <input x-ref="username" name="username" class="input-text-4a3582a6" type="text" required />
                     </div>
                     <div>
-                        <label for="paste-name">Your paste name</label>
-                        <input x-ref="pasteName" name="paste-name" class="input-text-4a3582a6" type="text" required />
+                        <label for="pasta-name">Your pasta name</label>
+                        <input x-ref="pastaName" name="pasta-name" class="input-text-4a3582a6" type="text" required />
                     </div>
                 </div>
             </div>
             <footer class="cp-footer-e3165e9d" x-data="list">
-                <template x-for="s in streamers">
-                    <div>
-                        <div @click="select(s)" class="cp-list-72648db7" x-data="{uid:generateUID()}" :id="uid">
+                <template x-for="s in streamers" :key="s">
+                    <div x-data="{uid:generateUID()}">
+                        <div @click="select(s)" class="cp-list-72648db7" :id="uid">
                             <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
                                 <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg" fill="none"
                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
@@ -106,7 +120,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </div>
-                            <span x-text="s">
+                            <span :id="uid" x-text="s">
 
                             </span>
                             <div class="cp-arrow-svg-b6bb2e7a">
@@ -121,15 +135,15 @@
                             <template x-data="emotes" x-for="ctx in context[active]">
                                 <div x-show="active == s" style="position: relative;">
                                     <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                    <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePaste_"
+                                    <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePasta_"
                                         class="cp-msg-preview-8ee8c5b1">
                                         <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
                                                 x-text="$store.settings.username.val"></span><span
                                                 style="margin-right: 3px;">:</span>
                                         </div><span class="emote_container_2fdf6c3d"
-                                            x-html="parseEmotes(ctx.msg)"></span>
+                                            x-html="parseEmotes(ctx.msg, active)"></span>
                                     </div>
-                                    <div class="cp-close-a3243b52" @click="deletePaste(active, ctx.uid, uid)">
+                                    <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid, uid)">
                                         <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                             stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
                                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -169,19 +183,18 @@
                         </template>
                     </main>
                     <footer class="modal-footer-4a348d16">
-                        <button @click="modalSettingsSave"
-                            class="inline-flex items-center py-2 px-3 bg-emerald-600 hover:bg-opacity-95 text-white rounded-md shadow mr-2">
-                            Accept
+                        <button @click="modalSettingsSave" class="cp-btn cp-btn-modal-save">
+                            Save
                         </button>
-                        <button @click="settingsModalShow=!1"
-                            class="inline-flex items-center py-2 px-3 bg-gray-100 hover:bg-opacity-95 text-black rounded-md shadow">
-                            Cancel
+                        <button @click="settingsModalShow=!1" class="cp-btn cp-btn-modal-close">
+                            Close
                         </button>
                     </footer>
                 </div>
             </div>
         </template>
     </div>
+
 </body>
 
 </html>
