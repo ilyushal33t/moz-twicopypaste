@@ -13,6 +13,7 @@
       ],
       "js": [
         "css.js",
+        "html.js",
         "copium.js"
       ]
     }

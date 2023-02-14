@@ -3,7 +3,10 @@ const css = `:root {
     --bg-dark: #131313;
     --bg-main: #1b1c20;
     --z-index: 9999999;
-    --tw-violet: rgba(138, 100, 226, 0.7)
+    --tw-violet: rgba(138, 100, 226, 0.7);
+    --success-color: rgba(71, 199, 135, 0.9);
+    --error-color: rgba(233, 78, 78, 0.9);
+    --main-window-width: 460px;
 }
 
 
@@ -44,7 +47,10 @@ input {
     padding: 8px;
     font-size: 12px;
     color: rgba(255, 255, 255, .9);
+}
 
+svg {
+    cursor: pointer;
 }
 
 .settings-input-031f6120 {
@@ -146,7 +152,7 @@ label {
 .cp-main-c4898d02 {
     /* relative w-[400px] text-[#EFEFF1] text-sm */
     position: relative;
-    width: 460px;
+    width: var(--main-window-width);
     color: var(--color-main);
     font-size: 14px;
 }
@@ -214,11 +220,16 @@ label {
     padding: 12px;
 }
 
-#saved-success-e48392b4 {
+#saved-success-e48392b4,
+#error-msg-e48392b4 {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: rgba(71, 199, 135, 0.9);
+    background-color: var(--success-color);
+}
+
+#error-msg-e48392b4 {
+    background-color: var(--error-color);
 }
 
 .cp-list-72648db7 {
