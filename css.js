@@ -1,4 +1,4 @@
-const css = `:root {
+const CSS = `:root {
     --color-main: #efeff1;
     --bg-dark: #131313;
     --bg-main: #1b1c20;
@@ -6,7 +6,10 @@ const css = `:root {
     --tw-violet: rgba(138, 100, 226, 0.7);
     --success-color: rgba(71, 199, 135, 0.9);
     --error-color: rgba(233, 78, 78, 0.9);
-    --main-window-width: 460px;
+    --main-window-width: 520px;
+    --main-max-height: 500px;
+    --textarea-padding: 4px;
+    --info-block-width: 130px;
 }
 
 
@@ -19,7 +22,7 @@ body {
 }
 
 #cp-area-bee11b14:focus,
-input {
+.cp-main-data-0ea9e2d3>input {
     outline: none;
 }
 
@@ -34,7 +37,7 @@ input {
 }
 
 .cp-area-bee11b14,
-input {
+.input {
     /* mt-2 resize-v bg-[rgba(33,33,33,.8)] w-[250px] max-h-[80px] min-h-[30px] text-white/90 text-sm p-2 */
     margin-top: 8px;
     border: 0px;
@@ -49,11 +52,16 @@ input {
     color: rgba(255, 255, 255, .9);
 }
 
+.search-by-pastaname-input-14a50f55 {
+    min-height: 12px;
+}
+
 svg {
     cursor: pointer;
 }
 
-.settings-input-031f6120 {
+.settings-input-031f6120,
+.early-preview-input-031f6120 {
     min-height: 20px;
     width: auto;
 }
@@ -145,6 +153,11 @@ svg {
     /* display: inline-flex; */
 }
 
+.cp-msg-preview-8ee8c5b1.live-preview {
+    margin-left: 0px !important;
+    width: 340px !important;
+}
+
 label {
     font-size: 12px;
 }
@@ -155,6 +168,11 @@ label {
     width: var(--main-window-width);
     color: var(--color-main);
     font-size: 14px;
+}
+
+.cp-main-content-39f3d0d7 {
+    max-height: var(--main-max-height);
+    overflow: auto;
 }
 
 .cp-btn {
@@ -211,6 +229,9 @@ label {
     /* bg-[#292d33] p-3 border-x-4 border-[#1a1d24] */
     background-color: var(--bg-main);
     padding: 12px;
+}
+
+.inline-flex {
     display: inline-flex;
 }
 
@@ -290,7 +311,7 @@ label {
 }
 
 .emote_container_2fdf6c3d.b253c65b {
-    min-width: 100px;
+    min-width: 28px;
     display: inline-block;
 }
 
@@ -308,9 +329,14 @@ label {
 }
 
 .info-block-82670232 {
+    width: calc(var(--info-block-width) - var(--textarea-padding));
     padding: 10px;
     margin-bottom: 10px;
     border-left: .5px solid var(--bg-dark)
+}
+
+.info-block-82670232 label {
+    font-size: 10px;
 }
 
 .input-text-4a3582a6,
@@ -325,7 +351,6 @@ label {
 .input-button-4a3582a6 {
     border: 1px solid var(--bg-main);
     cursor: pointer;
-    width: 100px;
     max-height: 50px !important;
     transition: all ease-in-out .75ms;
 }

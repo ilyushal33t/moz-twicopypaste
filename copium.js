@@ -1,40 +1,37 @@
 var loaded = false;
+var oldHref = document.location.href;
 
-const createScript = (src) => {
-    let script = document.createElement('script');
-    script.setAttribute('defer', 'defer');
-    script.src = src;
-    script.async = true;
-    document.head.appendChild(script);
-
-    return script;
-}
+const WINDOW_WIDTH = 520;
 
 const $style = document.createElement('style');
-$style.innerHTML = css;
+$style.innerHTML = CSS;
 document.head.append($style);
 
 with (browser.runtime) {
-    createScript(getURL('alpine/alpine.min.js'));
-    createScript(getURL('alpine/persist.js'));
-    createScript(getURL('script.js'));
+    try {
+        createScript(getURL('alpine/alpine.min.js'));
+        createScript(getURL('alpine/persist.js'));
+        createScript(getURL('script.js'));
+    } catch (e) { console.error(e); }
 }
 
-var oldHref = document.location.href;
-
 window.onanimationstart = function () {
-    var bodyList = document.querySelector("body")
+    const bodyList = document.querySelector("body")
 
-    var observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
             if (oldHref != document.location.href) {
-                if (loaded) { loaded = false; }
+                let $oldWindow = document.querySelector('div.cp-main-data-0ea9e2d3')
+                if ($oldWindow) $oldWindow.remove();
+                if (loaded) {
+                    loaded = false;
+                }
                 oldHref = document.location.href;
             }
         });
     });
 
-    var config = {
+    const config = {
         childList: true,
         subtree: true
     };
@@ -46,7 +43,6 @@ window.onanimationend = async function () {
     if (loaded) return;
     loaded = true;
     try {
-
         // const $main = document.querySelector('.Layout-sc-1xcs6mc-0.dajtya');
         const $main = document.querySelector('div#root');
         const $elem = document.createElement('div');
@@ -55,12 +51,15 @@ window.onanimationend = async function () {
         const $openButton = document.createElement('button');
         const $twitchChatBlock = document.querySelector('.Layout-sc-1xcs6mc-0.fLaIqI')
 
-        var animIndex = 0, animTxt = '\\|/-';
-
+        let animIndex = 0, animTxt = '\\|/-';
         const animInterval = setInterval(() => {
-            if ($openButton.innerHTML.length > 10) return clearInterval(animInterval);
+            if ($openButton.innerHTML.length > 1) {
+                // animIndex = animTxt = null;
+                return clearInterval(animInterval);
+            }
             $openButton.innerHTML = animTxt[animIndex++ % animTxt.length]
         }, 300)
+
         $openButton.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
 
         $underChatGUI.insertBefore($openButton, $settingsBtn)
@@ -70,16 +69,27 @@ window.onanimationend = async function () {
         $main.insertBefore($elem, $main.firstChild);
 
         const $mainWindow = document.querySelector('div.cp-main-data-0ea9e2d3');
+        $mainWindow.style.width = WINDOW_WIDTH;
 
         __dragElement($mainWindow, document.querySelector('header.cp-header-dd32fa6e'));
 
-        console.log(window.innerWidth - $twitchChatBlock.clientWidth - $mainWindow.clientWidth)
-        console.log($mainWindow)
-        $mainWindow.style.left = window.innerWidth - $twitchChatBlock.clientWidth - ($mainWindow.clientWidth || 460) + 'px';
+        $mainWindow.style.left = window.innerWidth - $twitchChatBlock.clientWidth - ($mainWindow.clientWidth || WINDOW_WIDTH) + 'px';
         $mainWindow.style.top = window.innerHeight / 2 + 'px';
 
     } catch (e) { void console.error(e) }
 
+}
+
+function createScript(src, settings = { append: true, appendTo: document.head }) {
+    let script = document.createElement('script');
+    // script.setAttribute('defer', 'true');
+    script.src = src;
+    script.async = true;
+    if (settings.append) {
+        settings.appendTo.appendChild(script);
+    }
+
+    return script;
 }
 
 function __dragElement(elmnt, header) {
@@ -118,11 +128,11 @@ function __dragElement(elmnt, header) {
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
         elmnt.offsetTop < 10
             ? (elmnt.style.top = '10px')
-            : elmnt.offsetBottom > -2
+            : elmnt.offsetBottom > -10
                 ? (elmnt.style.top = window.innerHeight - elmnt.offsetHeight - 10 + 'px')
-                : elmnt.offsetLeft < 2
+                : elmnt.offsetLeft < 10
                     ? (elmnt.style.left = '10px')
-                    : elmnt.offsetRight > -2
+                    : elmnt.offsetRight > -10
                         ? (elmnt.style.left = window.innerWidth - elmnt.offsetWidth - 10 + 'px')
                         : void 0;
     }

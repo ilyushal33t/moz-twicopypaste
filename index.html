@@ -89,77 +89,113 @@
                     </svg>
                 </div>
             </header>
-            <div class="cp-content-11af01d1">
-                <div class="textarea-block-f382e8ac">
-                    <label for="cp-area-bee11b14">Enter your pasta to save.</label>
-                    <textarea spellcheck="false" maxlength="500" x-ref="textarea" class="cp-area-bee11b14"
-                        name="cp-area-bee11b14" id="cp-area-bee11b14" placeholder="type here..."></textarea>
-                    <input
-                        @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.username.value) ? log('added to ' + $refs.username.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')"
-                        class="input-button-4a3582a6" type="button" value="Send" />
-                </div>
-                <div class="info-block-82670232">
-                    <div>
-                        <label for="username">Channel name</label>
-                        <input x-ref="username" name="username" class="input-text-4a3582a6" type="text" required />
-                    </div>
-                    <div>
-                        <label for="pasta-name">Your pasta name</label>
-                        <input x-ref="pastaName" name="pasta-name" class="input-text-4a3582a6" type="text" required />
-                    </div>
-                </div>
-            </div>
-            <footer x-data="emotes" class="cp-footer-e3165e9d">
-                <div x-data="list">
-                    <template x-for="s in streamers" :key="s">
-                        <div x-data="{uid:generateUID()}">
-                            <div @click="select(s)" class="cp-list-72648db7" :id="uid">
-                                <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
-                                    <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg" fill="none"
-                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                        class="cp-close-svg-a8b1f124">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </div>
-                                <span :id="uid" x-text="s">
-
-                                </span>
-                                <div class="cp-arrow-svg-b6bb2e7a">
-                                    <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg"
-                                        fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                    </svg>
-                                </div>
+            <div class="cp-main-content-39f3d0d7">
+                <div class="cp-content-11af01d1">
+                    <div class="inline-flex" x-data="{textarea_x_model: ''}">
+                        <div class="info-block-82670232">
+                            <div>
+                                <label for="username">Channel name</label>
+                                <input x-ref="username" name="username" class="input-text-4a3582a6 input" type="text"
+                                    :value="currentLocation" required />
                             </div>
-                            <div class="data-container-673efd75">
-                                <template x-for="ctx in context[active]">
-                                    <div x-show="active == s" style="position: relative;">
-                                        <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                        <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePasta_"
-                                            class="cp-msg-preview-8ee8c5b1">
-                                            <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
-                                                    x-text="$store.settings.username.val"></span><span
-                                                    style="margin-right: 3px;">:</span>
-                                            </div><span class="emote_container_2fdf6c3d"
-                                                x-html="parseEmotes(ctx.msg, active)"></span>
-                                        </div>
-                                        <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid, uid)">
-                                            <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
+                            <div>
+                                <label for="pasta-name">Your pasta name</label>
+                                <input x-ref="pastaName" name="pasta-name" class="input-text-4a3582a6 input"
+                                    type="text" />
+                            </div>
+                            <input
+                                @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.username.value) ? log('added to ' + $refs.username.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')"
+                                x-ref="saveBtn" class="input-button-4a3582a6 input" type="button" value="Save" />
+                        </div>
+                        <div class="textarea-block-f382e8ac">
+                            <label for="cp-area-bee11b14">Enter your pasta to save.</label>
+                            <textarea spellcheck="false" maxlength="500" x-ref="textarea"
+                                x-model.debounce="textarea_x_model" class="cp-area-bee11b14" name="cp-area-bee11b14"
+                                id="cp-area-bee11b14"
+                                x-init="$el.addEventListener('keyup',e=>{let{shiftKey,ctrlKey,altKey,keyCode}=e;if([shiftKey,ctrlKey,altKey].every(e=>e==false)&&keyCode==13)($refs.saveBtn.click(),$el.value='')})"
+                                placeholder="type here..."></textarea>
+
+                            <div x-show="textarea_x_model" x-data="emotes" style="position: relative;">
+                                <br>
+                                <div x-cloak @click="await saveToClipboard($refs.textarea.value)" x-bind="_savePasta_"
+                                    class="cp-msg-preview-8ee8c5b1 live-preview">
+                                    <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
+                                            x-text="$store.settings.username.val"></span><span
+                                            style="margin-right: 4px;">:</span>
+                                    </div><span class="emote_container_2fdf6c3d"
+                                        x-html.transition="parseEmotes(textarea_x_model, $refs.username.value)"></span>
+                                </div>
+                                <br>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="search-by-pastaname">Search by pasta name</label>
+                        <input class="search-by-pastaname-input-14a50f55 input" type="text"
+                            name="search-by-pastaname" />
+                    </div>
+                    <hr>
+                </div>
+                <footer class="cp-footer-e3165e9d">
+                    <div x-data="list">
+                        <template x-for="s in streamers" :key="s">
+                            <div x-data="emotes">
+                                <div x-data="{uid:generateUID()}">
+                                    <div @click="select(s)" class="cp-list-72648db7" :id="uid">
+                                        <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
+                                            <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg"
+                                                fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                                class="cp-close-svg-a8b1f124">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
                                                     d="M6 18L18 6M6 6l12 12" />
                                             </svg>
                                         </div>
-                                        <br>
-                                        <hr>
+                                        <span :id="uid" x-text="s">
+
+                                        </span>
+                                        <div class="cp-arrow-svg-b6bb2e7a">
+                                            <svg :class="{'rotate-90': active == s}" xmlns="http://www.w3.org/2000/svg"
+                                                fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                            </svg>
+                                        </div>
                                     </div>
-                                </template>
+                                    <div class="data-container-673efd75">
+                                        <template x-for="ctx in context[active]">
+                                            <div x-show="active == s" style="position: relative;">
+                                                <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
+                                                <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePasta_"
+                                                    class="cp-msg-preview-8ee8c5b1">
+                                                    <div class="user_container_087b8fa9"><span
+                                                            class="username_preview_37582eb4"
+                                                            x-text="$store.settings.username.val"></span><span
+                                                            style="margin-right: 3px;">:</span>
+                                                    </div><span class="emote_container_2fdf6c3d"
+                                                        x-html="parseEmotes(ctx.msg, active)"></span>
+                                                </div>
+                                                <div class="cp-close-a3243b52"
+                                                    @click="deletePasta(active, ctx.uid, uid)">
+                                                    <svg xmlns=" http://www.w3.org/2000/svg" fill="none"
+                                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                                        class="cp-close-svg-a8b1f124">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </div>
+                                                <br>
+                                                <hr>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </template>
-                </div>
-            </footer>
+                        </template>
+                    </div>
+                </footer>
+            </div>
+
             <div id="saved-success-e48392b4" x-show="saved && !error">
                 saved
             </div>
@@ -176,11 +212,13 @@
                         <h2>Settings</h2>
                     </header>
                     <main class="modal-content-4a348d16">
-                        <template x-for="[key, val] in Object.entries(settings)">
+                        <template x-for="[key, val] in Object.entries(settings)" :key="key">
                             <template x-if="val.workingStatus">
-                                <div>
-                                    <span x-text="key + ':'"></span>
-                                    <input :name="key" class="settings-input-031f6120" :type="val.type"
+                                <div
+                                    style="padding: 8px; margin-bottom: 10px; border-top: .5px dotted rgba(90, 90, 90, 0.7);">
+                                    <span x-text="val.help"></span><br>
+                                    <span x-text="val.name + ':'"></span>
+                                    <input :name="key" class="settings-input-031f6120 input" :type="val.type"
                                         :value="val.val">
                                 </div>
                             </template>

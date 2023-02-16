@@ -1,8 +1,41 @@
-// ; (function () {
-
-// var window = new Object();
-var DEBUG = false;
-var errorEmotes = [
+//TODO: more settings, user interactive functions, fav emotes[?] live-preview fix, search by pastas names
+const DEBUG = false;
+const LOCAL_DEBUG = document.location.host != 'www.twitch.tv';
+const DEFAULT_SETTINGS = {
+    username: {
+        name: 'Your username',
+        help: 'Change username you want to see examples from.',
+        type: 'text',
+        val: 'c00ln1ckl33t',
+        workingStatus: true,
+    },
+    savePastaMethod: {
+        name: 'Clipboard save method',
+        help: 'Method you want to save pasta to clipboard. Currently is ' + this.val,
+        type: 'select',
+        val: 'click',
+        workingStatus: false,
+    },
+    theme: {
+        name: 'Theme',
+        help: 'Change extension theme',
+        type: 'select',
+        val: 'dark',
+        workingStatus: false,
+    },
+    copyPastaBtnEmote: {
+        name: 'Open button emote',
+        help: 'Write an emote name if this emote is available from someone\'s streamer you added, or paste 7tv or betterttv URL to emote (cdn / emote page).',
+        type: 'text',
+        val: 'NaM',
+        workingStatus: true,
+    },
+};
+const DEFAULT_PASTAS_DATA = {
+    streamers: [],
+    context: {},
+};
+const ERROR_EMOTES = [
     'https://7tv.app/emotes/638507a9fed40bb16636c6ac',
     'https://7tv.app/emotes/6151c1de43b2d9da0d32adf9',
     'https://7tv.app/emotes/61774bcae0801fb98787f5a5',
@@ -10,48 +43,52 @@ var errorEmotes = [
     'https://7tv.app/emotes/625f1b0598a6c8cc55577855',
     'https://7tv.app/emotes/6299cf3347051898ec04cd6c',
 ];
-var defaultSettings = {
-    username: {
-        type: 'text',
-        val: 'c00ln1ckl33t',
-        workingStatus: true,
-    },
-    savePastaMethod: {
-        type: 'select',
-        val: 'click',
-        workingStatus: false,
-    },
-    theme: {
-        type: 'select',
-        val: 'dark',
-        workingStatus: false,
-    },
-    copyPastaBtnEmote: {
-        type: 'text',
-        val: 'NaM',
-        workingStatus: true,
-    },
-};
-var defaultPastasData = {
-    streamers: [],
-    context: {},
-};
 
 log.error = console.error;
-
 
 document.addEventListener('alpine:init', async function () {
 
     Alpine.data('_main_', function () {
         return {
             log: log,
-            settings: this.$persist(this.$store.settings || defaultSettings),
-            pastasData: this.$persist(this.$store.pastasData || defaultPastasData),
+            settings: this.$persist(this.$store.settings || DEFAULT_SETTINGS),
+            pastasData: this.$persist(this.$store.pastasData || DEFAULT_PASTAS_DATA),
             settingsModalShow: false,
             _mainWindowShow__: DEBUG,
             saved: false,
             error: false,
             errorMsg: null,
+            currentLocation: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1),
+            init() {
+                let settingsKeys = Object.keys(this.settings);
+                let __defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
+                if (!__defaultSettingsKeys.every(key => settingsKeys.includes(key))) {
+                    __defaultSettingsKeys.forEach(key => {
+                        if (!this.settings[key]) {
+                            log(key + ' was added after update')
+                            this.settings[key] = DEFAULT_SETTINGS[key];
+                        }
+                    })
+                } else if (!settingsKeys.every(key => __defaultSettingsKeys.includes(key))) {
+                    settingsKeys.forEach(key => {
+                        if (!DEFAULT_SETTINGS[key]) {
+                            log(key + ' was deleted after update')
+                            delete this.settings[key];
+                        }
+                    });
+                };
+
+                Alpine.store('settings', this.settings);
+                Alpine.store('pastasData', this.pastasData);
+                Alpine.store('SELF_MAIN', this);
+
+                Alpine.bind('_savePasta_', async function () {
+                    const binds = {};
+                    return binds;
+                }.bind(this));
+
+                log('inited');
+            },
             async savePasta(pasta, streamer) {
                 try {
                     if (!pasta.msg.trim() || !streamer.trim()) {
@@ -61,7 +98,7 @@ document.addEventListener('alpine:init', async function () {
                     streamer = streamer.toLowerCase();
                     if (this.pastasData.streamers.includes(streamer) || await this.twitchUserExists(streamer)) {
                         if (!pasta.name.trim())
-                            pasta.name = pasta.msg.trim().split` `[0];
+                            pasta.name = pasta.msg.trim().split` `[0].slice(0, 32);
                         with (this.pastasData) {
                             if (!streamers.includes(streamer)) {
                                 streamers.push(streamer);
@@ -95,6 +132,7 @@ document.addEventListener('alpine:init', async function () {
                     .forEach(el => {
                         this.settings[el.name].val = el.value;
                     });
+
                 window.__changeBtnEmote_(this);
                 this.showSaved();
             },
@@ -145,18 +183,6 @@ document.addEventListener('alpine:init', async function () {
 
                 return typeof await (await fetch(url)).json() === 'object';
             },
-            init() {
-                Alpine.store('settings', this.settings);
-                Alpine.store('pastasData', this.pastasData);
-                Alpine.store('SELF_MAIN', this);
-
-                Alpine.bind('_savePasta_', async function () {
-                    const binds = {};
-                    return binds;
-                }.bind(this));
-
-                log('inited');
-            },
         }
     });
 
@@ -175,71 +201,10 @@ document.addEventListener('alpine:init', async function () {
 
     Alpine.data('emotes', function () {
         return {
-            async fetchData() {
-                if (!this.loading) {
-                    this.loading = true;
-                    this.globalEmotes = await this.getJSON('https://tw-emotes-api.onrender.com/globalemotes');
-
-                    this.channelsInfo = [];
-
-                    await this.fillStreamersInfoAsync(this.channelsInfo);
-
-
-                    this.channelsEmotesArr = this.channelsInfo
-                        .map(e => ({ [e.user.broadcaster_login]: e.emotes }));
-
-                    this.channelsEmotesObj = this.channelsEmotesArr.reduce((acc, v) => {
-                        const [k, reg] = Object.entries(v)[0]
-                        acc[k] = [].concat(...Object.values(reg));
-                        return acc;
-                    }, {});
-
-                    this.mergedChannelsEmotes = this.deepObjectValuesMerge(this.channelsEmotesArr)
-
-                    this._regexp_CHANNELS = this.channelsEmotesArr
-                        .map(e => Object.entries(e)
-                            .map(([k, v]) => ({
-                                [k]: new RegExp(
-                                    Object.values(v)
-                                        .map(e =>
-                                            e.map(e =>
-                                                e.name.__create_STRING_RegExpForEmote()
-                                            ).join`|`
-                                        )
-                                    , 'gm'
-                                )
-                            })
-                            )).reduce((acc, v) => {
-                                const [k, reg] = Object.entries(v[0])[0]
-                                acc[k] = reg;
-                                return acc;
-                            }, {});
-
-
-                    this.allGlobalEmotes = [].concat(...Object.values(this.globalEmotes));
-                    this._ALL_EMOTES_ = [].concat(...Object.values(this.mergedChannelsEmotes).concat(...Object.values(this.globalEmotes)));
-
-                    this._regexp_GLOBAL = new RegExp(
-                        this.allGlobalEmotes.map(e =>
-                            e.name.__create_STRING_RegExpForEmote()
-                        ).join`|`
-                        , 'gm');
-
-                    this._ALL_EMOTES_REGEXP_ = new RegExp(
-                        this._ALL_EMOTES_.map(e =>
-                            e.name.__create_STRING_RegExpForEmote()
-                        ).join`|`
-                        , 'gm');
-
-
-                    log('emotes loaded');
-                    this.loading = false;
-                    return;
-                }
-            },
             async init() {
                 window.__changeBtnEmote_ = this.changeBtnEmote;
-                Alpine.store('SELF_EMOTES', this);
+                this.SELF_MAIN = this.$store.SELF_MAIN;
+
                 await this.fetchData();
 
                 if (!this.loading) {
@@ -248,47 +213,42 @@ document.addEventListener('alpine:init', async function () {
                     this.changeBtnEmote(this);
                 }
             },
+            async fetchData() {
+                if (!this.loading) {
+                    this.loading = true;
+
+                    Object.assign(this, await new FetchAllData(this)._get());
+
+                    log('Channel emotes loaded for ' + this.$store.pastasData.streamers.join(', '));
+                    this.loading = false;
+                    return;
+                }
+            },
             changeBtnEmote(self) {
-                const $copyPastaBtn = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') || (DEBUG ? document.createElement('button') : void 0);
-                const SELF_MAIN = self.$store.SELF_MAIN;
+                const $copyPastaBtn = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') || (LOCAL_DEBUG ? document.createElement('button') : void 0);
                 let btnEmote = null;
 
-                if (!$copyPastaBtn.parentNode && DEBUG) {
+                if (!$copyPastaBtn.parentNode && LOCAL_DEBUG) {
                     $copyPastaBtn.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
+                    $copyPastaBtn.className = 'cp-btn'
                     document.body.appendChild($copyPastaBtn);
                 }
 
                 $copyPastaBtn.onclick = function () {
-                    SELF_MAIN._mainWindowShow__ = !SELF_MAIN._mainWindowShow__
-                };
-
-                const check7TV_BTTV = function (src) {
-                    src = new URL(src);
-                    let btnEmote = null;
-                    if ((src.origin.includes('7tv.app') || src.origin.includes('betterttv')) && src.href.includes('emote')) {
-                        if (src.hostname.includes('cdn') && /\/emote\/.*\/[1-4]x\.webp/g.test(src.pathname)) {
-                            src = src.href.replace(/[234]x\.webp/, '1x.webp')
-                            btnEmote = __createEmote('', src)
-                        } else {
-                            src = `https://cdn.${src.host.replace(/com/, 'net')}${src.pathname.replace(/emotes/, 'emote')}/1x.webp`;
-                            btnEmote = __createEmote('', src);
-                        }
-                    } else throw new Error('Only 7tv.app and betterttv is supported');
-                    return btnEmote;
+                    self._mainWindowShow__ = !self._mainWindowShow__
                 };
 
                 try {
                     btnEmote = check7TV_BTTV(self.$store.settings.copyPastaBtnEmote.val);
-
                 } catch (e) {
                     const emoteName = self.$store.settings.copyPastaBtnEmote.val;
                     btnEmote = emoteName.__parseEmote(window._ALL_EMOTES_REGEXP_, window._ALL_EMOTES_);
 
                     if (btnEmote == emoteName) {
                         const err = 'invalid URL or this emote is not available';
-                        SELF_MAIN.showError(err)
-                        console.error(err);
-                        self.$store.settings.copyPastaBtnEmote.val = btnEmote = errorEmotes[randNumb(errorEmotes.length)];
+                        self.showError(err);
+                        log.error(err);
+                        self.$store.settings.copyPastaBtnEmote.val = btnEmote = ERROR_EMOTES[randNumb(ERROR_EMOTES.length)];
                         btnEmote = check7TV_BTTV(btnEmote);
                     }
                 }
@@ -314,30 +274,10 @@ document.addEventListener('alpine:init', async function () {
                         .map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join` `.replace(/\#\#\# *[ ]/g, '');
                 } catch (e) { log.error(e) };
             },
-            deepObjectValuesMerge(arr) {
-                let result = [];
-                arr.forEach(e => {
-                    result.push(
-                        [].concat(...Object.values(Object.values(e)[0]).map(e => Object.values(e)))
-                    );
-                });
-                return [].concat(...result);
-            },
-            async getJSON(url, params) {
-                if (params !== void 0 && typeof params === 'object') {
-                    url += '?' + Object.entries(params).map(([key, value]) => `${key}=${value} `).join('&');
-                }
-                try {
-                    return (await fetch(url)).json()
-                } catch (e) {
-                    log.error(e + ' On fetching url: ' + url);
-                    return {};
-                }
-            },
             async fillStreamersInfoAsync(arr) {
                 await Promise.all(this.$store.pastasData.streamers
                     .map(async (streamer) =>
-                        await this.getJSON('https://tw-emotes-api.onrender.com/full_user', { name: streamer })))
+                        await getJSON('https://tw-emotes-api.onrender.com/full_user', { name: streamer })))
                     .then(data => {
                         data.forEach((e, i) => {
                             arr[i] = e;
@@ -348,6 +288,60 @@ document.addEventListener('alpine:init', async function () {
         }
     });
 });
+
+class FetchAllData {
+    constructor(EMOTES_this) {
+        let { $store, fillStreamersInfoAsync } = EMOTES_this;
+        Object.assign(this, { $store, fillStreamersInfoAsync });
+    }
+    async _get() {
+        this.channelsInfo = [];
+        this.globalEmotes = await getJSON('https://tw-emotes-api.onrender.com/globalemotes');
+        this.allGlobalEmotes = [].concat(...Object.values(this.globalEmotes));
+        this._regexp_GLOBAL = new RegExp(
+            this.allGlobalEmotes.map(e =>
+                e.name.__create_STRING_RegExpForEmote()
+            ).join`|`
+            , 'gm');
+
+        await this.fillStreamersInfoAsync(this.channelsInfo);
+
+        this.channelsEmotesArr = this.channelsInfo
+            .map(e => ({ [e.user.broadcaster_login]: e.emotes }));
+        this.channelsEmotesObj = this.channelsEmotesArr.reduce((acc, v) => {
+            const [k, reg] = Object.entries(v)[0]
+            acc[k] = [].concat(...Object.values(reg));
+            return acc;
+        }, {});
+        this.mergedChannelsEmotes = objectValuesMerge(this.channelsEmotesArr)
+        this._regexp_CHANNELS = this.channelsEmotesArr
+            .map(e => Object.entries(e)
+                .map(([k, v]) => ({
+                    [k]: new RegExp(
+                        Object.values(v)
+                            .map(e =>
+                                e.map(e =>
+                                    e.name.__create_STRING_RegExpForEmote()
+                                ).join`|`
+                            )
+                        , 'gm'
+                    )
+                })
+                )).reduce((acc, v) => {
+                    const [k, reg] = Object.entries(v[0])[0]
+                    acc[k] = reg;
+                    return acc;
+                }, {});
+        this._ALL_EMOTES_ = [].concat(...Object.values(this.mergedChannelsEmotes).concat(...Object.values(this.globalEmotes)));
+        this._ALL_EMOTES_REGEXP_ = new RegExp(
+            this._ALL_EMOTES_.map(e =>
+                e.name.__create_STRING_RegExpForEmote()
+            ).join`|`
+            , 'gm');
+
+        return this;
+    }
+}
 
 function log(msg) {
     console.info(`%c[CopyPasta] %c${msg}`, 'color: #9858FF', `color: #00B642`)
@@ -372,23 +366,64 @@ function __createEmote(alt, src) {
     spanA.appendChild(spanB);
     spanB.appendChild(img);
     img.onload = function () {
-        document.querySelector('span#' + uid).setAttribute('style', 'min-width: ' + img.width + 'px')
+        try {
+            document.querySelector('span#' + uid).setAttribute('style', 'min-width: ' + img.width + 'px');
+        } catch (e) { log.error('something weird happened when parsing emote.' + e); }
     };
     return spanA.outerHTML;
 };
+
+function check7TV_BTTV(src) {
+    src = new URL(src);
+    let btnEmote = null;
+    if ((src.origin.includes('7tv.app') || src.origin.includes('betterttv')) && /emote[s]?\/.*/.test(src.href)) {
+        if (src.hostname.includes('cdn') && /\/emote\/.*\/[1-4]x\.webp/g.test(src.pathname)) {
+            src = src.href.replace(/[234]x\.webp/, '1x.webp')
+            btnEmote = __createEmote('', src)
+        } else {
+            src = `https://cdn.${src.host.replace(/com/, 'net')}${src.pathname.replace(/emotes/, 'emote')}/1x.webp`;
+            btnEmote = __createEmote('', src);
+        }
+    } else throw new Error('Only 7tv and betterttv is supported');
+    return btnEmote;
+};
+
+async function getJSON(url, params) {
+    if (params !== void 0 && typeof params === 'object') {
+        url += '?' + Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&');
+    }
+    try {
+        return (await fetch(url)).json()
+    } catch (e) {
+        log.error(e + ' On fetching url: ' + url);
+        return {};
+    }
+}
+
+function objectValuesMerge(arr) {
+    let result = [];
+    arr.forEach(e => {
+        result.push(
+            [].concat(...Object.values(Object.values(e)[0]).map(e => Object.values(e)))
+        );
+    });
+    return [].concat(...result);
+}
 
 function randNumb(max, min = 0) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 
-String.prototype.__parseEmote = function (REGEXP, EMOTES_DATA) {
-    if (!__createEmote) throw new Error('function __createEmote not defined.');
-    return this.replace(REGEXP, e => __createEmote(e, EMOTES_DATA.find(a => a.name == e.replace(/ /g, '')).image1x));
+String.prototype.__parseEmote = function (RegExp_, emotesData) {
+    try {
+        if (!__createEmote) throw new Error('function __createEmote is not defined.');
+        return this.replace(RegExp_, e => __createEmote(e, emotesData.find(a => a.name == e.replace(/ /g, '')).image1x));
+    } catch (e) { log.error(e) }
 }
 
 String.prototype.__create_STRING_RegExpForEmote = function () {
-    return this.replace(/[\\\/\)\(\;\:\>\<\_\-\+\}\{\[\]\.\?\|]/gm, e => `\\${e}`)
-        .replace(/^.*$/gmi, e => `^ *${e} *$`)
+    try {
+        return this.replace(/[\\\/\)\(\;\:\>\<\_\-\+\}\{\[\]\.\?\|]/gm, e => `\\${e}`)
+            .replace(/^.*$/gmi, e => `^ *${e} *$`);
+    } catch (e) { log.error(e) }
 }
-
-// })()
