@@ -1,6 +1,15 @@
 //TODO: more settings, user interactive functions, fav emotes[?] live-preview fix, search by pastas names
 const DEBUG = false;
 const LOCAL_DEBUG = document.location.host != 'www.twitch.tv';
+const API_URL = new class {
+    constructor() {
+        this.URL = 'https://tw-emotes-api.onrender.com';
+        this.globalEmotes = this.URL + '/globalemotes';
+        this.channel = this.URL + '/user';
+        this.channelEmotes = this.URL + '/useremotes';
+        this.fullUser = this.URL + '/full_user';
+    };
+};
 const DEFAULT_SETTINGS = {
     username: {
         name: 'Your username',
@@ -11,7 +20,7 @@ const DEFAULT_SETTINGS = {
     },
     savePastaMethod: {
         name: 'Clipboard save method',
-        help: 'Method you want to save pasta to clipboard. Currently is ' + this.val,
+        help: 'Method you want to save pasta to clipboard.',
         type: 'select',
         val: 'click',
         workingStatus: false,
@@ -54,11 +63,20 @@ document.addEventListener('alpine:init', async function () {
             settings: this.$persist(this.$store.settings || DEFAULT_SETTINGS),
             pastasData: this.$persist(this.$store.pastasData || DEFAULT_PASTAS_DATA),
             settingsModalShow: false,
-            _mainWindowShow__: DEBUG,
+            mainWindowShow: DEBUG,
             saved: false,
             error: false,
             errorMsg: null,
-            currentLocation: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1),
+            streamerModel: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1),
+            streamerExists: true,
+            textareaModel: '',
+            searchByPastanameModel: '',
+            searchRegExp() {
+                return new RegExp(this.searchByPastanameModel, 'gmi')
+            },
+            isLoadingEmotes() {
+                return this.streamerExists ? 'Loading emotes for ' + this.streamerModel + '...' : 'No streamer found yet.';
+            },
             init() {
                 let settingsKeys = Object.keys(this.settings);
                 let __defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
@@ -80,12 +98,8 @@ document.addEventListener('alpine:init', async function () {
 
                 Alpine.store('settings', this.settings);
                 Alpine.store('pastasData', this.pastasData);
-                Alpine.store('SELF_MAIN', this);
 
-                Alpine.bind('_savePasta_', async function () {
-                    const binds = {};
-                    return binds;
-                }.bind(this));
+                window.__MAIN__ = this;
 
                 log('inited');
             },
@@ -107,14 +121,17 @@ document.addEventListener('alpine:init', async function () {
                                 ? context[streamer].push({
                                     name: pasta.name,
                                     msg: pasta.msg,
-                                    uid: crypto.randomUUID(),
+                                    parsedCache: window.__EMOTES__.parseEmotes(pasta.msg, streamer),
+                                    uid: generateUID(),
                                 })
                                 : context[streamer] = [{
                                     name: pasta.name,
                                     msg: pasta.msg,
-                                    uid: crypto.randomUUID(),
-                                }]
+                                    parsedCache: window.__EMOTES__.parseEmotes(pasta.msg, streamer),
+                                    uid: generateUID(),
+                                }];
                         }
+                        this.showSaved();
                     } else {
                         this.showError('User with this name does not exist. You should provide real logins to save.')
                         return false;
@@ -125,7 +142,6 @@ document.addEventListener('alpine:init', async function () {
                 }
                 return true;
             },
-            generateUID: generateUID,
             modalSettingsSave() {
                 this.settingsModalShow = false;
                 [...document.querySelectorAll('.settings-input-031f6120')]
@@ -133,11 +149,8 @@ document.addEventListener('alpine:init', async function () {
                         this.settings[el.name].val = el.value;
                     });
 
-                window.__changeBtnEmote_(this);
+                window.__EMOTES__.changeBtnEmote(this);
                 this.showSaved();
-            },
-            _closeMain__() {
-                this._mainWindowShow__ = !this._mainWindowShow__;
             },
             showSaved() {
                 this.saved = true;
@@ -153,9 +166,8 @@ document.addEventListener('alpine:init', async function () {
                     this.errorMsg = null;
                 }, 5e3);
             },
-            async saveToClipboard(msg) {
-                await navigator.clipboard.writeText(msg);
-                this.showSaved();
+            openCloseMainWindow() {
+                this.mainWindowShow = !this.mainWindowShow;
             },
             deletePasta(streamer, uid, streamerUID) {
                 let ctx = this.pastasData.context[streamer];
@@ -178,11 +190,32 @@ document.addEventListener('alpine:init', async function () {
                 }
                 return pr;
             },
+            async saveToClipboard(msg) {
+                await navigator.clipboard.writeText(msg);
+                this.showSaved();
+            },
             async twitchUserExists(streamer) {
                 let url = `https://tw-emotes-api.onrender.com/user?name=${streamer}`;
 
                 return typeof await (await fetch(url)).json() === 'object';
             },
+            _binds_: {
+                textarea: {
+                    spellcheck: false,
+                    maxlength: 500,
+                    'x-ref': "textarea",
+                    'x-model.debounce': "textareaModel",
+                    class: "cp-area-bee11b14",
+                    name: "cp-area-bee11b14",
+                    id: "cp-area-bee11b14",
+                    'x-init': "$el.addEventListener('keyup',e=>{let{shiftKey:s,ctrlKey:c,altKey:a,keyCode:k}=e;if([s,c,a].every(e=>e==0)&&k==13)($refs.saveBtn.click(),$el.value='')})",
+                    placeholder: "type here...",
+                },
+                searchByPastaname: {
+                    spellcheck: false,
+                    'x-model.debounce': "searchByPastanameModel",
+                }
+            }
         }
     });
 
@@ -202,8 +235,7 @@ document.addEventListener('alpine:init', async function () {
     Alpine.data('emotes', function () {
         return {
             async init() {
-                window.__changeBtnEmote_ = this.changeBtnEmote;
-                this.SELF_MAIN = this.$store.SELF_MAIN;
+                window.__EMOTES__ = this;
 
                 await this.fetchData();
 
@@ -234,9 +266,7 @@ document.addEventListener('alpine:init', async function () {
                     document.body.appendChild($copyPastaBtn);
                 }
 
-                $copyPastaBtn.onclick = function () {
-                    self._mainWindowShow__ = !self._mainWindowShow__
-                };
+                $copyPastaBtn.onclick = () => self.openCloseMainWindow();
 
                 try {
                     btnEmote = check7TV_BTTV(self.$store.settings.copyPastaBtnEmote.val);
@@ -267,45 +297,58 @@ document.addEventListener('alpine:init', async function () {
                         setTimeout(() => this.parseEmotes(msg), 4e3);
                         return msg;
                     }
+                    msg = msg.replace(/(\<[a-z]{1}|\<\/)/gmi, e => [...e].join('&#13;'));
+                    if (checkForHTML(msg)) return msg;
                     return msg.split` `.map(m =>
                         m.__parseEmote(this._regexp_GLOBAL, this.allGlobalEmotes)
                             .__parseEmote(this._regexp_CHANNELS[streamer], this.channelsEmotesObj[streamer])
                     )
                         .map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join` `.replace(/\#\#\# *[ ]/g, '');
                 } catch (e) { log.error(e) };
-            },
-            async fillStreamersInfoAsync(arr) {
-                await Promise.all(this.$store.pastasData.streamers
-                    .map(async (streamer) =>
-                        await getJSON('https://tw-emotes-api.onrender.com/full_user', { name: streamer })))
-                    .then(data => {
-                        data.forEach((e, i) => {
-                            arr[i] = e;
-                        });
-                    })
-                return;
-            },
+            }
         }
     });
 });
 
 class FetchAllData {
-    constructor(EMOTES_this) {
-        let { $store, fillStreamersInfoAsync } = EMOTES_this;
-        Object.assign(this, { $store, fillStreamersInfoAsync });
+    constructor(_this) {
+        this.$store = _this.$store;
     }
     async _get() {
-        this.channelsInfo = [];
-        this.globalEmotes = await getJSON('https://tw-emotes-api.onrender.com/globalemotes');
+        await this.globalEmotes();
+        await this.channelsEmotes();
+        this.allEmotes();
+        return this;
+    }
+    async fillStreamersInfoAsync(arr) {
+        await Promise.all(this.$store.pastasData.streamers
+            .map(async (streamer) => {
+                let channel = await getJSON(API_URL.channel, { name: streamer })
+                let channelEmotes = await getJSON(API_URL.channelEmotes, { id: channel.id })
+                return {
+                    user: channel,
+                    emotes: channelEmotes,
+                }
+            }))
+            .then(data => {
+                data.forEach((e, i) => {
+                    arr[i] = e;
+                });
+            })
+        return arr;
+    }
+    async globalEmotes() {
+        this.globalEmotes = await getJSON(API_URL.globalEmotes);
         this.allGlobalEmotes = [].concat(...Object.values(this.globalEmotes));
         this._regexp_GLOBAL = new RegExp(
             this.allGlobalEmotes.map(e =>
                 e.name.__create_STRING_RegExpForEmote()
             ).join`|`
             , 'gm');
-
+    }
+    async channelsEmotes() {
+        this.channelsInfo = [];
         await this.fillStreamersInfoAsync(this.channelsInfo);
-
         this.channelsEmotesArr = this.channelsInfo
             .map(e => ({ [e.user.broadcaster_login]: e.emotes }));
         this.channelsEmotesObj = this.channelsEmotesArr.reduce((acc, v) => {
@@ -332,14 +375,14 @@ class FetchAllData {
                     acc[k] = reg;
                     return acc;
                 }, {});
+    }
+    allEmotes() {
         this._ALL_EMOTES_ = [].concat(...Object.values(this.mergedChannelsEmotes).concat(...Object.values(this.globalEmotes)));
         this._ALL_EMOTES_REGEXP_ = new RegExp(
             this._ALL_EMOTES_.map(e =>
                 e.name.__create_STRING_RegExpForEmote()
             ).join`|`
             , 'gm');
-
-        return this;
     }
 }
 
@@ -356,7 +399,6 @@ function __createEmote(alt, src) {
     const spanA = document.createElement('span'),
         spanB = document.createElement('span');
     const uid = generateUID();
-    // <span class="emote_container_2fdf6c3d b253c65b" :style="{minWidth: 28 + 'px'}"><span>
     spanA.setAttribute('class', 'emote_container_2fdf6c3d b253c65b');
     spanA.id = uid;
     img.src = src;
@@ -389,7 +431,7 @@ function check7TV_BTTV(src) {
 };
 
 async function getJSON(url, params) {
-    if (params !== void 0 && typeof params === 'object') {
+    if (params !== void 0 && typeof params === 'object' && params.constructor.name === 'Object') {
         url += '?' + Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&');
     }
     try {
@@ -400,7 +442,14 @@ async function getJSON(url, params) {
     }
 }
 
+function checkForHTML(text) {
+    let elem = document.createElement('div')
+    elem.innerHTML = text;
+    return !!elem.childElementCount;
+}
+
 function objectValuesMerge(arr) {
+    //TODO: rewrite for universal use
     let result = [];
     arr.forEach(e => {
         result.push(

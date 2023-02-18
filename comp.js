@@ -10,9 +10,9 @@ fs.readFile(__dirname + '/style.css', (err, data) => {
 
 fs.readFile(__dirname + '/index.html', (err, data) => {
     if (err) { throw err; }
-    data = data.toString().replace(/\n/gm, '').match(/\<div x\-show\=\"\_main.*\>.*\<\/body\>/gmi)
+    data = data.toString().replace(/\n/gm, '').match(/\<div .*\/body\>/gmi)
     data = data[0].slice(0, data.length - 8)
-    let html = 'const MAIN_HTML = \`' + data + '\`;';
+    let html = 'const HTML = \`' + data + '\`;';
     fs.writeFile(__dirname + '/html.js', html, err => {
         if (err) { throw err; }
     });

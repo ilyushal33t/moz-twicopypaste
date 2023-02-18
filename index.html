@@ -70,7 +70,7 @@
 
 <body>
 
-    <div x-show="_mainWindowShow__" x-data="_main_" x-cloak class="cp-main-data-0ea9e2d3">
+    <div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWindowShow" x-cloak>
         <div class="cp-main-c4898d02">
             <header class="cp-header-dd32fa6e">
                 <div @click="settingsModalShow=!0" class="cp-settings-a3243b52">
@@ -82,7 +82,7 @@
                     </svg>
                 </div>
                 5Header
-                <div @click="_closeMain__" class="cp-close-a3243b52">
+                <div @click="openCloseMainWindow" class="cp-close-a3243b52">
                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="cp-close-svg-a8b1f124">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -91,12 +91,14 @@
             </header>
             <div class="cp-main-content-39f3d0d7">
                 <div class="cp-content-11af01d1">
-                    <div class="inline-flex" x-data="{textarea_x_model: ''}">
+                    <div class="inline-flex">
                         <div class="info-block-82670232">
                             <div>
-                                <label for="username">Channel name</label>
-                                <input x-ref="username" name="username" class="input-text-4a3582a6 input" type="text"
-                                    :value="currentLocation" required />
+                                <label for="streamer">Channel name</label>
+                                <input x-ref="streamer" name="streamer" class="input-text-4a3582a6 input" type="text"
+                                    x-model.debounce="streamerModel" required />
+                                <span x-show="0"
+                                    x-effect='streamerExists = await twitchUserExists(streamerModel)'></span>
                             </div>
                             <div>
                                 <label for="pasta-name">Your pasta name</label>
@@ -104,42 +106,38 @@
                                     type="text" />
                             </div>
                             <input
-                                @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.username.value) ? log('added to ' + $refs.username.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')"
+                                @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.streamer.value) ? log('added to ' + $refs.streamer.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')"
                                 x-ref="saveBtn" class="input-button-4a3582a6 input" type="button" value="Save" />
                         </div>
                         <div class="textarea-block-f382e8ac">
-                            <label for="cp-area-bee11b14">Enter your pasta to save.</label>
-                            <textarea spellcheck="false" maxlength="500" x-ref="textarea"
-                                x-model.debounce="textarea_x_model" class="cp-area-bee11b14" name="cp-area-bee11b14"
-                                id="cp-area-bee11b14"
-                                x-init="$el.addEventListener('keyup',e=>{let{shiftKey,ctrlKey,altKey,keyCode}=e;if([shiftKey,ctrlKey,altKey].every(e=>e==false)&&keyCode==13)($refs.saveBtn.click(),$el.value='')})"
-                                placeholder="type here..."></textarea>
+                            <label for="cp-area-bee11b14"
+                                x-text="'Enter your pasta to save. ' + isLoadingEmotes()"></label>
+                            <textarea x-bind="_binds_.textarea"></textarea>
 
-                            <div x-show="textarea_x_model" x-data="emotes" style="position: relative;">
+                            <div x-show="textareaModel" x-data="emotes" style="position: relative;">
                                 <br>
-                                <div x-cloak @click="await saveToClipboard($refs.textarea.value)" x-bind="_savePasta_"
+                                <div x-cloak @click="await saveToClipboard($refs.textarea.value)"
                                     class="cp-msg-preview-8ee8c5b1 live-preview">
                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
                                             x-text="$store.settings.username.val"></span><span
                                             style="margin-right: 4px;">:</span>
                                     </div><span class="emote_container_2fdf6c3d"
-                                        x-html.transition="parseEmotes(textarea_x_model, $refs.username.value)"></span>
+                                        x-html="parseEmotes(textareaModel, $refs.streamer.value)"></span>
                                 </div>
                                 <br>
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <label for="search-by-pastaname">Search by pasta name</label>
-                        <input class="search-by-pastaname-input-14a50f55 input" type="text"
-                            name="search-by-pastaname" />
+                    <div style="display:flex;justify-content:center;align-items:center;">
+                        <input class="search-by-pastaname-input-14a50f55 input" type="text" name="search-by-pastaname"
+                            placeholder="Search by pasta name..." x-bind="_binds_.searchByPastaname" />
                     </div>
                     <hr>
                 </div>
-                <footer class="cp-footer-e3165e9d">
-                    <div x-data="list">
+                <footer x-data="emotes" class="cp-footer-e3165e9d">
+                    <div x-data="list" x-show="!searchByPastanameModel">
                         <template x-for="s in streamers" :key="s">
-                            <div x-data="emotes">
+                            <div>
                                 <div x-data="{uid:generateUID()}">
                                     <div @click="select(s)" class="cp-list-72648db7" :id="uid">
                                         <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
@@ -166,14 +164,14 @@
                                         <template x-for="ctx in context[active]">
                                             <div x-show="active == s" style="position: relative;">
                                                 <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
-                                                <div @click="await saveToClipboard(ctx.msg)" x-bind="_savePasta_"
+                                                <div @click="await saveToClipboard(ctx.msg)"
                                                     class="cp-msg-preview-8ee8c5b1">
                                                     <div class="user_container_087b8fa9"><span
                                                             class="username_preview_37582eb4"
                                                             x-text="$store.settings.username.val"></span><span
                                                             style="margin-right: 3px;">:</span>
                                                     </div><span class="emote_container_2fdf6c3d"
-                                                        x-html="parseEmotes(ctx.msg, active)"></span>
+                                                        x-html="ctx.parsedCache || parseEmotes(ctx.msg, active)"></span>
                                                 </div>
                                                 <div class="cp-close-a3243b52"
                                                     @click="deletePasta(active, ctx.uid, uid)">
@@ -190,6 +188,32 @@
                                         </template>
                                     </div>
                                 </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div x-show="searchByPastanameModel" x-data="{streamers: $store.pastasData.streamers}">
+                        <template
+                            x-for="s in $store.pastasData.streamers.filter(e => $store.pastasData.context[e].some(e=>searchRegExp().test(e.name)))"
+                            :key="s">
+                            <div>
+                                <template
+                                    x-for="ctx in $store.pastasData.context[s].filter(e => searchRegExp().test(e.name))"
+                                    :key="ctx.uid">
+                                    <div style="border: 1px solid silver;">
+                                        <div x-text="'streamer: ' + s">
+
+                                        </div>
+                                        <div x-text="'name: ' + ctx.name">
+
+                                        </div>
+                                        <div x-html="'msg: ' + (ctx.parsedCache || parseEmotes(ctx.msg, s))">
+
+                                        </div>
+                                        <div x-text="'uid: ' + ctx.uid">
+
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </template>
                     </div>
@@ -216,10 +240,12 @@
                             <template x-if="val.workingStatus">
                                 <div
                                     style="padding: 8px; margin-bottom: 10px; border-top: .5px dotted rgba(90, 90, 90, 0.7);">
+                                    <div style="margin-bottom: 10px;">
+                                        <span x-text="val.name + ':'"></span>
+                                        <input :name="key" class="settings-input-031f6120 input" :type="val.type"
+                                            :value="val.val">
+                                    </div>
                                     <span x-text="val.help"></span><br>
-                                    <span x-text="val.name + ':'"></span>
-                                    <input :name="key" class="settings-input-031f6120 input" :type="val.type"
-                                        :value="val.val">
                                 </div>
                             </template>
                         </template>

@@ -52,8 +52,10 @@ body {
     color: rgba(255, 255, 255, .9);
 }
 
-.search-by-pastaname-input-14a50f55 {
+.search-by-pastaname-input-14a50f55,
+.settings-input-031f6120 {
     min-height: 12px;
+    max-height: 12px;
 }
 
 svg {
@@ -62,7 +64,6 @@ svg {
 
 .settings-input-031f6120,
 .early-preview-input-031f6120 {
-    min-height: 20px;
     width: auto;
 }
 
@@ -332,7 +333,7 @@ label {
     width: calc(var(--info-block-width) - var(--textarea-padding));
     padding: 10px;
     margin-bottom: 10px;
-    border-left: .5px solid var(--bg-dark)
+    border-right: .5px solid var(--bg-dark)
 }
 
 .info-block-82670232 label {

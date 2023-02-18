@@ -54,17 +54,16 @@ window.onanimationend = async function () {
         let animIndex = 0, animTxt = '\\|/-';
         const animInterval = setInterval(() => {
             if ($openButton.innerHTML.length > 1) {
-                // animIndex = animTxt = null;
                 return clearInterval(animInterval);
             }
             $openButton.innerHTML = animTxt[animIndex++ % animTxt.length]
         }, 300)
 
         $openButton.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
+        $underChatGUI.insertBefore($openButton, $settingsBtn);
+        $openButton.setAttribute('onclick', '__MAIN__.openCloseMainWindow()');
 
-        $underChatGUI.insertBefore($openButton, $settingsBtn)
-
-        $elem.innerHTML = MAIN_HTML;
+        $elem.innerHTML = HTML;
 
         $main.insertBefore($elem, $main.firstChild);
 
