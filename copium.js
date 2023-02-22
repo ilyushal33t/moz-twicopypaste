@@ -61,7 +61,7 @@ window.onanimationend = async function () {
 
         $openButton.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
         $underChatGUI.insertBefore($openButton, $settingsBtn);
-        $openButton.setAttribute('onclick', '__MAIN__.openCloseMainWindow()');
+        $openButton.setAttribute('onclick', '__MAIN__.openMainWindow()');
 
         $elem.innerHTML = HTML;
 
