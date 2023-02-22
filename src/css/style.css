@@ -6,10 +6,14 @@
     --tw-violet: rgba(138, 100, 226, 0.7);
     --success-color: rgba(71, 199, 135, 0.9);
     --error-color: rgba(233, 78, 78, 0.9);
-    --main-window-width: 520px;
+    --main-content-padding: 14px;
+    --main-window-width: calc(520px + var(--main-content-padding) * 2);
     --main-max-height: 500px;
     --textarea-padding: 4px;
     --info-block-width: 130px;
+    --emotes-block-width: 300px;
+    --emotes-block-left: -324px;
+    --emotes-block-height: 300px;
 }
 
 
@@ -79,6 +83,17 @@ svg {
     justify-content: center;
     align-items: center;
     background-color: rgba(39, 38, 38, 0.8);
+}
+
+.cp-emotes-block-ee94efc2 {
+    z-index: calc(var(--z-index) + 1);
+    position: absolute;
+    width: var(--emotes-block-width);
+    height: var(--emotes-block-height);
+    background-color: var(--bg-main);
+    left: var(--emotes-block-left);
+    border: 1px solid #131313;
+    padding: 12px;
 }
 
 .modal-head-4a348d16,
@@ -174,6 +189,8 @@ label {
 .cp-main-content-39f3d0d7 {
     max-height: var(--main-max-height);
     overflow: auto;
+    padding: var(--main-content-padding);
+    background-color: var(--bg-main);
 }
 
 .cp-btn {

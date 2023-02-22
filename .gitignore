@@ -2,4 +2,4 @@
 steam*
 node_modules
 pac*lock*
-script.js
+dist/*
