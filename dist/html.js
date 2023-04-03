@@ -1,4 +1,4 @@
-const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWindowShow" x-cloak="">
+const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWindowShow" x-cloak="" @dblclick.outside="mainWindowShow=!1">
         <div x-show="emotesMenuShow" x-data="emotes" class="cp-emotes-block-ee94efc2">
             <template @emotes-menu.window="">
                 <div x-text="emote.name">
@@ -30,19 +30,19 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                                 <label for="streamer">Channel name</label>
                                 <input x-ref="streamer" name="streamer" class="input-text-4a3582a6 input" type="text" x-model.debounce="streamerModel" required="">
                                 <span x-show="0" x-effect="streamerExists = await twitchUserExists(streamerModel); isLoadingEmotes()"></span>
-                                <input @click="emotesMenuShow = !emotesMenuShow" class="input-button-4a3582a6 input" type="button" value="Emotes">
+                                <input x-show="0" @click="emotesMenuShow = !emotesMenuShow" class="input-button-4a3582a6 input" type="button" value="Emotes">
                             </div>
 
                             <div>
                                 <label for="pasta-name">Your pasta name</label>
                                 <input x-ref="pastaName" name="pasta-name" class="input-text-4a3582a6 input" type="text">
                             </div>
-                            <input @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.streamer.value) ? log('added to ' + $refs.streamer.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')" x-ref="saveBtn" class="input-button-4a3582a6 input" type="button" value="Save">
+                            <input @click="await savePasta({msg:$refs.textarea.value,name:$refs.pastaName.value}, $refs.streamer.value, document.querySelector('#cp-livepreview').innerHTML) ? log('added to ' + $refs.streamer.value.toLowerCase()) : log('User with this name does not exist. You should provide real logins to save.')" x-ref="saveBtn" class="input-button-4a3582a6 input" type="button" value="Save">
                         </div>
                         <div class="textarea-block-f382e8ac">
                             <label for="cp-area-bee11b14" x-text="'Enter your pasta to save.'"></label>
                             <textarea x-bind="_binds_.textarea"></textarea>
-                            <span class="emote_container_2fdf6c3d" @emotes-loaded.window="$el.innerHTML = $event.detail.parseEmotes('https://7tv.app/emotes/63527ab873d94505b7360476', void 0, {url: true})" @contextmenu="$event.preventDefault();openFunctionsSettings()" @click="textareaModel = FUNCTIONS[selFunc.SELECTED].func(textareaModel, selFunc.FUNCTIONS[selFunc.SELECTED].props)">
+                            <span title="RBM to choose function, LMB to apply." class="emote_container_2fdf6c3d" @emotes-loaded.window="$el.innerHTML = $event.detail.parseEmotes('https://7tv.app/emotes/6397d16afe402d70accc1c44', void 0, {url: true})" @contextmenu="$event.preventDefault();openFunctionsSettings()" @click="textareaModel = FUNCTIONS[selFunc.SELECTED].func(textareaModel, selFunc.FUNCTIONS[selFunc.SELECTED].props)">
                             </span>
 
                             <div x-show="functionsSettingsShow" @click.outside="openFunctionsSettings()" class="ctx-menu-body-50cb404c" x-transition:leave="">
@@ -68,7 +68,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                                 <br>
                                 <div x-cloak="" @click="await saveToClipboard($refs.textarea.value)" class="cp-msg-preview-8ee8c5b1 live-preview">
                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4" x-text="$store.settings.username.val"></span><span style="margin-right: 4px;">:</span>
-                                    </div><span class="emote_container_2fdf6c3d" x-html="streamerExists ? parseEmotes(textareaModel, $refs.streamer.value, {tmp:true}): parseEmotes(textareaModel, void 0, {tmp:true})"></span>
+                                    </div><span id="cp-livepreview" class="emote_container_2fdf6c3d" x-html="streamerExists ? parseEmotes(textareaModel, $refs.streamer.value, {tmp:true}): parseEmotes(textareaModel, void 0, {tmp:true})"></span>
                                 </div>
                                 <br>
                             </div>
@@ -80,13 +80,13 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                     <hr>
                 </div>
                 <footer x-data="emotes" class="cp-footer-e3165e9d">
-                    <div x-data="list" x-show="!searchByPastanameModel">
+                    <div x-data="list" x-show="!searchByPastaModel">
                         <template x-for="s in streamers" :key="s">
                             <div>
                                 <div x-data="{uid:generateUID()}">
                                     <div @click="select(s)" class="cp-list-72648db7" :id="uid">
                                         <div class="cp-close-a3243b52" style="right: 15px; opacity: .5;">
-                                            <svg @click="deleteStreamer(s, uid)" xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
+                                            <svg @click="deleteStreamer(s)" xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                                             </svg>
                                         </div>
@@ -107,7 +107,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4" x-text="$store.settings.username.val"></span><span style="margin-right: 3px;">:</span>
                                                     </div><span class="emote_container_2fdf6c3d" x-html="ctx.parsedCache || parseEmotes(ctx.msg, active)"></span>
                                                 </div>
-                                                <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid, uid)">
+                                                <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid)">
                                                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                                                     </svg>
@@ -121,18 +121,21 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                             </div>
                         </template>
                     </div>
-                    <template x-if="searchByPastanameModel" x-data="{streamers: $store.pastasData.streamers}">
-                        <template x-for="s in $store.pastasData.streamers.filter(e => $store.pastasData.context[e].some(e=>searchRegExp().test(e.name)))" :key="s">
+                    <template x-if="searchByPastaModel" x-data="{streamers: $store.pastasData.streamers}">
+                        <template x-for="s in $store.pastasData.streamers.filter(e => $store.pastasData.context[e].some(e=>searchRegExp().test(e.name) || searchRegExp().test(e.msg)))" :key="s">
                             <div>
-                                <template x-for="ctx in $store.pastasData.context[s].filter(e => searchRegExp().test(e.name))" :key="ctx.uid">
-                                    <div style="border: 1px solid silver;">
+                                <template x-for="ctx in $store.pastasData.context[s].filter(e => searchRegExp().test(e.name) || searchRegExp().test(e.msg))" :key="ctx.uid">
+                                    <div style="border: 1px inset rgba(90, 90, 90, 0.7); padding: 8px;">
                                         <div x-text="'streamer: ' + s">
 
                                         </div>
                                         <div x-text="'name: ' + ctx.name">
 
                                         </div>
-                                        <div x-html="'msg: ' + (ctx.parsedCache || parseEmotes(ctx.msg, s))">
+                                        <div @click="await saveToClipboard(ctx.msg)" style="margin-top: 8px; margin-bottom: 8px;" x-html="'msg: ' + (ctx.parsedCache || parseEmotes(ctx.msg, s))">
+
+                                        </div>
+                                        <div x-html="'raw msg: ' + ctx.msg">
 
                                         </div>
                                         <div x-text="'uid: ' + ctx.uid">
