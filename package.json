@@ -1,5 +1,27 @@
 {
   "devDependencies": {
     "@types/alpinejs": "^3.7.1"
-  }
+  },
+  "dependencies": {
+    "jsdom": "^21.1.1"
+  },
+  "name": "copium",
+  "version": "1.0.0",
+  "main": "comp.js",
+  "scripts": {
+    "dev": "node comp.js",
+    "build": "node comp.js build; zip -r copium alpine/ dist/ icons/ copium.js manifest.json",
+    "src": "node comp.js build; zip -r source alpine/ dist/ icons/ copium.js manifest.json src/ comp.js package.json .gitignore"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilyushal33t/moz-twicopypaste.git"
+  },
+  "author": "ilyushabledny",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ilyushal33t/moz-twicopypaste/issues"
+  },
+  "homepage": "https://github.com/ilyushal33t/moz-twicopypaste#readme",
+  "description": ""
 }

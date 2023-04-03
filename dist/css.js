@@ -1,4 +1,4 @@
-:root {
+const CSS = `:root {
     --color-main: #efeff1;
     --bg-dark: #131313;
     --bg-main: #1b1c20;
@@ -409,4 +409,4 @@ label {
     background-color: #9146ff;
     color: rgb(216, 200, 255);
     border: 1px solid rgba(138, 100, 226, 0.7);
-}
+}`;

@@ -11,6 +11,7 @@ with (browser.runtime) {
     try {
         createScript(getURL('alpine/alpine.min.js'));
         createScript(getURL('alpine/persist.js'));
+        createScript(getURL('dist/utils.js'));
         createScript(getURL('dist/script.js'));
     } catch (e) { console.error(e); }
 }
@@ -92,6 +93,7 @@ function createScript(src, settings = { append: true, appendTo: document.head })
 }
 
 function __dragElement(elmnt, header) {
+    // TODO: bad practice. rewrite needed
     /* 
         https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
     */

@@ -12,8 +12,6 @@
         "*://*.twitch.tv/*"
       ],
       "js": [
-        "dist/css.js",
-        "dist/html.js",
         "copium.js"
       ]
     }
