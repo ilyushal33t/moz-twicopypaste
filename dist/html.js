@@ -29,7 +29,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                             <div>
                                 <label for="streamer">Channel name</label>
                                 <input x-ref="streamer" name="streamer" class="input-text-4a3582a6 input" type="text" x-model.debounce="streamerModel" required="">
-                                <span x-show="0" x-effect="streamerExists = await twitchUserExists(streamerModel); isLoadingEmotes()"></span>
+                                <span x-show="0" x-effect="await twitchUserExists(streamerModel); isLoadingEmotes()"></span>
                                 <input x-show="0" @click="emotesMenuShow = !emotesMenuShow" class="input-button-4a3582a6 input" type="button" value="Emotes">
                             </div>
 
@@ -66,7 +66,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
 
                             <div x-show="textareaModel" x-data="emotes" style="position: relative;">
                                 <br>
-                                <div x-cloak="" @click="await saveToClipboard($refs.textarea.value)" class="cp-msg-preview-8ee8c5b1 live-preview">
+                                <div x-cloak="" @click="await saveToClipboard($refs.textarea.value.trim().replace(/\n/g,' '));" class="cp-msg-preview-8ee8c5b1 live-preview">
                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4" x-text="$store.settings.username.val"></span><span style="margin-right: 4px;">:</span>
                                     </div><span id="cp-livepreview" class="emote_container_2fdf6c3d" x-html="streamerExists ? parseEmotes(textareaModel, $refs.streamer.value, {tmp:true}): parseEmotes(textareaModel, void 0, {tmp:true})"></span>
                                 </div>
@@ -75,7 +75,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                         </div>
                     </div>
                     <div style="display:flex;justify-content:center;align-items:center;">
-                        <input class="search-by-pastaname-input-14a50f55 input" type="text" name="search-by-pastaname" placeholder="Search by pasta name..." x-bind="_binds_.searchByPastaname">
+                        <input class="search-by-pastaname-input-14a50f55 input" type="text" name="search-by-pastaname" placeholder="Search..." x-bind="_binds_.searchByPastaname">
                     </div>
                     <hr>
                 </div>
@@ -105,7 +105,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                                                 <h2 x-text="ctx.name" class="cp-p-name-115e56dc"></h2>
                                                 <div @click="await saveToClipboard(ctx.msg)" class="cp-msg-preview-8ee8c5b1">
                                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4" x-text="$store.settings.username.val"></span><span style="margin-right: 3px;">:</span>
-                                                    </div><span class="emote_container_2fdf6c3d" x-html="ctx.parsedCache || parseEmotes(ctx.msg, active)"></span>
+                                                    </div><span class="emote_container_2fdf6c3d" x-html="parseEmotes(ctx.msg, active)"></span>
                                                 </div>
                                                 <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid)">
                                                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cp-close-svg-a8b1f124">
@@ -132,7 +132,7 @@ const HTML = `<div class="cp-main-data-0ea9e2d3" x-data="_main_" x-show="mainWin
                                         <div x-text="'name: ' + ctx.name">
 
                                         </div>
-                                        <div @click="await saveToClipboard(ctx.msg)" style="margin-top: 8px; margin-bottom: 8px;" x-html="'msg: ' + (ctx.parsedCache || parseEmotes(ctx.msg, s))">
+                                        <div @click="await saveToClipboard(ctx.msg)" style="margin-top: 8px; margin-bottom: 8px;" x-html="'msg: ' + parseEmotes(ctx.msg, s)">
 
                                         </div>
                                         <div x-html="'raw msg: ' + ctx.msg">

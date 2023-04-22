@@ -244,7 +244,10 @@ label {
 
 .cp-header-dd32fa6e {
     /* cursor-pointer p-1 bg-[#1a1d24] flex justify-center */
-    cursor: pointer;
+    cursor: move; /* fallback if grab cursor is unsupported */
+    cursor: grab;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
     padding: 4px;
     background-color: var(--bg-main);
     display: flex;

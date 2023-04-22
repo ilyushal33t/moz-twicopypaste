@@ -1,7 +1,7 @@
 //TODO: more settings, user interactive functions, fav emotes[?] live-preview fix, search by pastas names
 //Alpine version 3.11.1
 const DEBUG = false;
-const LOCAL_DEBUG = document.location.host != 'www.twitch.tv';
+const LOCAL_DEBUG = document.location.host !== 'www.twitch.tv';
 const API_URL = new class {
     URL = 'https://tw-emotes-api.onrender.com';
     globalEmotes = this.URL + '/globalemotes';
@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
         name: 'Open button emote',
         help: 'Write an emote name if this emote is available from someone\'s streamer you added, or paste 7tv or betterttv URL to emote (cdn / emote page).',
         type: 'text',
-        val: 'NaM',
+        val: 'https://7tv.app/emotes/63438a743d1bc89e0ff9e400',
         workingStatus: true,
     },
 };
@@ -53,39 +53,43 @@ const ERROR_EMOTES = [
 ];
 const FUNCTIONS = {
     fill: {
-        help: 'fill msg multiple times',
+        help: 'Paste message {x} times.',
         props: {
-            times: 6,
+            x: 6,
         },
-        func: function (msg) {
-            return (msg.endsWith(' ') ? msg.repeat(FUNCTIONS.fill.props.times) : (msg + ' ').repeat(FUNCTIONS.fill.props.times)).slice(0, 400);
+        func: function (msg, conf) {
+            if (msg.length > 499)
+                return msg;
+            return (msg.endsWith(' ') ? msg.repeat(conf.x) : (msg + ' ').repeat(conf.x)).slice(0, 500);
         },
     },
     shuffle: {
-        help: 'shuffle',
+        help: 'Pastes each word {x} times',
         props: {
-            len: 150,
+            x: 4,
         },
         func: function (msg, conf) {
+            if (msg.length > 499)
+                return msg;
             msg = msg.trim();
             if (!msg.length)
                 return '';
-            let out = '', fill, len = conf?.len || 150;
+            let out = '', fill;
             fill = msg.split(` `);
-            do {
-                out += fill[randNumb(fill.length)] + ' ';
-            } while (out.length <= len);
-            return out;
+            out = fill.map(e => (e + ' ').repeat(conf.x)).join(' ');
+            return out.slice(0, 500);
         }
     },
     shuffleInvisibleChar: {
-        help: 'shuffle invisible character',
+        help: 'Shuffle invisible character with message',
         props: {
             len: 150,
             charLen: 8,
             rand: 1,
         },
         func: function (msg, conf) {
+            if (msg.length > 499)
+                return msg;
             msg = msg.trim();
             if (!msg.length)
                 return '';
@@ -106,7 +110,7 @@ const FUNCTIONS = {
                 do {
                     out += fill[randNumb(fill.length)] + ' ' + invisibleChar.repeat(randNumb(12, 4)) + ' ';
                 } while (out.length <= len);
-                return out;
+                return out.slice(0, 500);
             }
         },
     },
@@ -114,23 +118,64 @@ const FUNCTIONS = {
 document.addEventListener('alpine:init', async function () {
     Alpine.data('_main_', function () {
         return {
+            // local storage variables
             settings: this.$persist(this.$store.settings || DEFAULT_SETTINGS),
             pastasData: this.$persist(this.$store.pastasData || DEFAULT_PASTAS_DATA),
+            selFunc: this.$persist({
+                SELECTED: 'shuffleInvisibleChar',
+                FUNCTIONS: FUNCTIONS,
+            }),
+            // booleans
             settingsModalShow: false,
             mainWindowShow: DEBUG,
             emotesMenuShow: false,
             saved: false,
             error: false,
-            errorMsg: null,
-            streamerModel: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1),
+            functionsSettingsShow: false,
             streamerExists: true,
+            errorMsg: null,
+            //models
+            streamerModel: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1).replace(/\/.*/g, ''),
             textareaModel: '',
             searchByPastaModel: '',
-            functionsSettingsShow: false,
-            selFunc: this.$persist({
-                SELECTED: 'shuffleInvisibleChar',
-                FUNCTIONS: FUNCTIONS,
-            }),
+            init() {
+                let settingsKeys = Object.keys(this.settings);
+                let defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
+                let defaultFuncs = Object.keys(FUNCTIONS);
+                let funcs = Object.keys(this.selFunc.FUNCTIONS);
+                if (!defaultSettingsKeys.every(key => settingsKeys.includes(key))) {
+                    defaultSettingsKeys.forEach(key => {
+                        if (!this.settings[key]) {
+                            log(key + ' was added after update');
+                            this.settings[key] = DEFAULT_SETTINGS[key];
+                        }
+                    });
+                }
+                else if (!settingsKeys.every(key => defaultSettingsKeys.includes(key))) {
+                    settingsKeys.forEach(key => {
+                        if (!DEFAULT_SETTINGS[key]) {
+                            log(key + ' was deleted after update');
+                            delete this.settings[key];
+                        }
+                    });
+                }
+                ;
+                if (defaultFuncs.length !== funcs.length) {
+                    defaultFuncs.forEach(func => {
+                        if (!funcs.includes(func)) {
+                            console.log(func);
+                            this.selFunc.FUNCTIONS[func] = FUNCTIONS[func];
+                        }
+                    });
+                }
+                Alpine.store('settings', this.settings);
+                Alpine.store('pastasData', this.pastasData);
+                globalThis.__MAIN__ = this;
+                log('inited');
+                document.querySelector('.cp-main-content-39f3d0d7').addEventListener('scroll', (e) => {
+                    this.functionsSettingsShow = false;
+                });
+            },
             searchRegExp() {
                 return new RegExp(this.searchByPastaModel, 'gmi');
             },
@@ -141,39 +186,11 @@ document.addEventListener('alpine:init', async function () {
                     let _regexpTempEmotes = new RegExp(tempEmotes.map((e) => e.name.__createEmoteRegExp()).join('|'), 'g');
                     if (_regexpTempEmotes.source === '(?:)')
                         _regexpTempEmotes = /\b\B/;
-                    globalThis.tmp = { emoteData: tempEmotes, emoteRegex: _regexpTempEmotes };
+                    globalThis.tmpEmotes = { emoteData: tempEmotes, emoteRegex: _regexpTempEmotes };
                 }
                 else
                     this.showError('User with this name does not exist. You should provide real logins to save.');
                 return;
-            },
-            init() {
-                let settingsKeys = Object.keys(this.settings);
-                let __defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
-                if (!__defaultSettingsKeys.every(key => settingsKeys.includes(key))) {
-                    __defaultSettingsKeys.forEach(key => {
-                        if (!this.settings[key]) {
-                            log(key + ' was added after update');
-                            this.settings[key] = DEFAULT_SETTINGS[key];
-                        }
-                    });
-                }
-                else if (!settingsKeys.every(key => __defaultSettingsKeys.includes(key))) {
-                    settingsKeys.forEach(key => {
-                        if (!DEFAULT_SETTINGS[key]) {
-                            log(key + ' was deleted after update');
-                            delete this.settings[key];
-                        }
-                    });
-                }
-                ;
-                Alpine.store('settings', this.settings);
-                Alpine.store('pastasData', this.pastasData);
-                globalThis.__MAIN__ = this;
-                log('inited');
-                document.querySelector('.cp-main-content-39f3d0d7').addEventListener('scroll', (e) => {
-                    this.functionsSettingsShow = false;
-                });
             },
             async savePasta(pasta, streamer, livePreview) {
                 try {
@@ -181,18 +198,19 @@ document.addEventListener('alpine:init', async function () {
                         this.showError('No pasta or streamer found.');
                         return false;
                     }
+                    pasta.msg = pasta.msg.trim().replace(/\n/g, ' ');
                     streamer = streamer.toLowerCase();
                     if (this.pastasData.streamers.includes(streamer) || await this.twitchUserExists(streamer)) {
                         if (!pasta.name.trim())
                             pasta.name = pasta.msg.trim().split(` `)[0].slice(0, 32);
                         if (!this.pastasData.streamers.includes(streamer)) {
                             this.pastasData.streamers.push(streamer);
+                            globalThis.__EMOTES__.init();
                         }
                         function save_(pasta) {
                             return {
                                 name: pasta.name,
                                 msg: pasta.msg,
-                                parsedCache: livePreview,
                                 uid: generateUID(),
                             };
                         }
@@ -245,10 +263,14 @@ document.addEventListener('alpine:init', async function () {
             },
             deletePasta(streamer, uid) {
                 let ctx = this.pastasData.context[streamer];
-                if (this.pastasData.context[streamer].length < 2)
+                if (this.pastasData.context[streamer].length < 2) {
                     this.deleteStreamer(streamer);
-                else
+                }
+                else {
+                    ifDebug(console.time, 'splice data');
                     this.pastasData.context[streamer].splice(ctx.map(e => e.uid).indexOf(uid), 1);
+                    ifDebug(console.timeEnd, 'splice data');
+                }
             },
             deleteStreamer(streamer, pr = false) {
                 if (!pr) {
@@ -271,7 +293,8 @@ document.addEventListener('alpine:init', async function () {
             async twitchUserExists(streamer) {
                 let url = `https://tw-emotes-api.onrender.com/user?name=${streamer}`;
                 try {
-                    return !(await (await fetch(url)).json()).error;
+                    this.streamerExists = !(await (await fetch(url)).json()).error;
+                    return this.streamerExists;
                 }
                 catch (err) {
                     log.error(err);
@@ -332,14 +355,15 @@ document.addEventListener('alpine:init', async function () {
                 }
             },
             changeBtnEmote(self) {
-                const $copyPastaBtn = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') || document.createElement('button');
-                let btnEmote;
-                if (!$copyPastaBtn.parentNode && LOCAL_DEBUG) {
+                const $copyPastaBtn = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') ?? document.createElement('button');
+                let btnEmote, $underChatGUI = document.querySelector('.Layout-sc-1xcs6mc-0.XTygj.chat-input__buttons-container > .Layout-sc-1xcs6mc-0.hOyRCN');
+                if (!($copyPastaBtn?.parentElement?.className == 'Layout-sc-1xcs6mc-0 hOyRCN') || LOCAL_DEBUG) {
                     $copyPastaBtn.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
-                    $copyPastaBtn.className = 'cp-btn';
-                    document.body.appendChild($copyPastaBtn);
+                    LOCAL_DEBUG
+                        ? document.body.appendChild($copyPastaBtn)
+                        : $underChatGUI.insertBefore($copyPastaBtn, $underChatGUI.firstChild);
                 }
-                document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca').removeAttribute('onclick');
+                document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca')?.removeAttribute('onclick');
                 const $newCopyPastaBtn = $copyPastaBtn.cloneNode(true);
                 let open = () => globalThis.__MAIN__.openMainWindow();
                 $newCopyPastaBtn.addEventListener('click', open);
@@ -366,6 +390,7 @@ document.addEventListener('alpine:init', async function () {
             },
             createEmote: globalThis.__createEmote,
             parseEmotes(msg, streamer, conf = { tmp: false, url: false }) {
+                ifDebug(log, msg, streamer, conf);
                 if (!msg)
                     return;
                 try {
@@ -378,9 +403,10 @@ document.addEventListener('alpine:init', async function () {
                         return msg;
                     }
                     msg = msg.replace(/(\<[a-z]{1}|\<\/)/gmi, e => [...e].join('&#13;'));
+                    msg = msg.trim().replace(/\n/g, ' ') + ' ';
                     if (conf.tmp && !this.$store.pastasData.streamers.includes(streamer) && globalThis.__MAIN__.streamerExists)
                         return msg
-                            .__parseEmotes(this._regexpGlobalEmotes, this.allGlobalEmotes, globalThis?.tmp?.emoteRegex, globalThis?.tmp?.emoteData);
+                            .__parseEmotes(this._regexpGlobalEmotes, this.allGlobalEmotes, globalThis?.tmpEmotes?.emoteRegex, globalThis?.tmpEmotes?.emoteData);
                     else if (streamer == void 0 || !this.$store.pastasData.streamers.includes(streamer))
                         return msg
                             .__parseEmotes(this._regexpGlobalEmotes, this.allGlobalEmotes);

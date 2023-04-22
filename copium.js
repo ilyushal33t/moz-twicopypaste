@@ -2,6 +2,7 @@ var loaded = false;
 var oldHref = document.location.href;
 
 const WINDOW_WIDTH = 520;
+var $underChatGUI, $openButton;
 
 const $style = document.createElement('style');
 $style.innerHTML = CSS;
@@ -16,11 +17,18 @@ with (browser.runtime) {
     } catch (e) { console.error(e); }
 }
 
-window.onanimationstart = function () {
+window.onanimationstart = async function () {
+    // waiting for chat load /* https://stackoverflow.com/questions/5525071/how-to-wait-until-an-element-exists  */
+
     const bodyList = document.querySelector("body")
 
     const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
+        mutations.forEach(async mutation => {
+
+            if (document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') === null) {
+                document.dispatchEvent(new Event('animanionend'));
+            }
+
             if (oldHref != document.location.href) {
                 let $oldWindow = document.querySelector('div.cp-main-data-0ea9e2d3')
                 if ($oldWindow) $oldWindow.remove();
@@ -42,27 +50,20 @@ window.onanimationstart = function () {
 
 window.onanimationend = async function () {
     if (loaded) return;
-    loaded = true;
+    // some add-ons can remove this button and it will not appear so we wait 1 second 
+    await sleep(1e3);
+
     try {
+        $underChatGUI = await waitForElm('.Layout-sc-1xcs6mc-0.XTygj.chat-input__buttons-container > .Layout-sc-1xcs6mc-0.hOyRCN');
         // const $main = document.querySelector('.Layout-sc-1xcs6mc-0.dajtya');
         const $main = document.querySelector('div#root');
         const $elem = document.createElement('div');
-        const $underChatGUI = document.querySelector('.Layout-sc-1xcs6mc-0.XTygj.chat-input__buttons-container > .Layout-sc-1xcs6mc-0.hOyRCN');
         const $settingsBtn = $underChatGUI.firstChild;
-        const $openButton = document.createElement('button');
         const $twitchChatBlock = document.querySelector('.Layout-sc-1xcs6mc-0.fLaIqI')
+        const $openButton = document.createElement('button');
 
-        let animIndex = 0, animTxt = '\\|/-';
-        const animInterval = setInterval(() => {
-            if ($openButton.innerHTML.length > 1) {
-                return clearInterval(animInterval);
-            }
-            $openButton.innerHTML = animTxt[animIndex++ % animTxt.length]
-        }, 300)
+        addOpenBtn($openButton, $underChatGUI, $settingsBtn);
 
-        $openButton.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
-        $underChatGUI.insertBefore($openButton, $settingsBtn);
-        $openButton.setAttribute('onclick', '__MAIN__.openMainWindow()');
 
         $elem.innerHTML = HTML;
 
@@ -75,6 +76,8 @@ window.onanimationend = async function () {
 
         $mainWindow.style.left = window.innerWidth - $twitchChatBlock.clientWidth - ($mainWindow.clientWidth || WINDOW_WIDTH) + 'px';
         $mainWindow.style.top = window.innerHeight / 2 + 'px';
+
+        loaded = true;
 
     } catch (e) { void console.error(e) }
 
@@ -93,10 +96,10 @@ function createScript(src, settings = { append: true, appendTo: document.head })
 }
 
 function __dragElement(elmnt, header) {
-    // TODO: bad practice. rewrite needed
+    // TODO: bad practice
     /* 
-        https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
-    */
+    https://www.w3schools.com/howto/tryit.asp?filename=tryhow_js_draggable
+*/
     var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     if (header) {
         header.onmousedown = dragMouseDown;
@@ -142,4 +145,47 @@ function __dragElement(elmnt, header) {
         document.onmouseup = null;
         document.onmousemove = null;
     }
+}
+
+function waitForElm(selector) {
+    return new Promise(resolve => {
+        if (document.querySelector(selector)) {
+            return resolve(document.querySelector(selector));
+        }
+
+        const observer = new MutationObserver(mutations => {
+            if (document.querySelector(selector)) {
+                resolve(document.querySelector(selector));
+                observer.disconnect();
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function addOpenBtn(el, to, before) {
+    let animIndex = 0, animTxt = '\\|/-';
+    const animInterval = setInterval(() => {
+        if (el.innerHTML.length > 1) {
+            return clearInterval(animInterval);
+        }
+        if (document.querySelectorAll('button#' + el.id).length > 1) {
+            el.remove();
+            return clearInterval(animInterval);
+        }
+
+        el.innerHTML = animTxt[animIndex++ % animTxt.length]
+    }, 300)
+
+    el.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
+    to.insertBefore(el, before);
+    el.setAttribute('onclick', '__MAIN__.openMainWindow()');
 }

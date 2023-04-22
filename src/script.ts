@@ -2,7 +2,7 @@
 //Alpine version 3.11.1
 
 const DEBUG = false;
-const LOCAL_DEBUG = document.location.host != 'www.twitch.tv';
+const LOCAL_DEBUG = document.location.host !== 'www.twitch.tv';
 const API_URL = new class {
     public URL = 'https://tw-emotes-api.onrender.com';
     public globalEmotes = this.URL + '/globalemotes';
@@ -36,7 +36,7 @@ const DEFAULT_SETTINGS = {
         name: 'Open button emote',
         help: 'Write an emote name if this emote is available from someone\'s streamer you added, or paste 7tv or betterttv URL to emote (cdn / emote page).',
         type: 'text',
-        val: 'NaM',
+        val: 'https://7tv.app/emotes/63438a743d1bc89e0ff9e400',
         workingStatus: true,
     },
 };
@@ -54,40 +54,41 @@ const ERROR_EMOTES = [
 ];
 const FUNCTIONS = {
     fill: {
-        help: 'fill msg multiple times',
+        help: 'Paste message {x} times.',
         props: {
-            times: 6,
+            x: 6,
         },
-        func: function (msg: string) {
-            return (msg.endsWith(' ') ? msg.repeat(FUNCTIONS.fill.props.times) : (msg + ' ').repeat(FUNCTIONS.fill.props.times)).slice(0, 400)
+        func: function (msg: string, conf: { x: number }) {
+            if (msg.length > 499) return msg;
+            return (msg.endsWith(' ') ? msg.repeat(conf.x) : (msg + ' ').repeat(conf.x)).slice(0, 500)
         },
     },
     shuffle: {
-        help: 'shuffle',
+        help: 'Pastes each word {x} times',
         props: {
-            len: 150,
+            x: 4,
         },
-        func: function (msg: string, conf: { len: number }): string {
+        func: function (msg: string, conf: { len: number, x: number }): string {
+            if (msg.length > 499) return msg;
             msg = msg.trim();
             if (!msg.length) return '';
             let out = '',
-                fill: string[],
-                len = conf?.len || 150;
+                fill: string[];
             fill = msg.split(` `);
-            do {
-                out += fill[randNumb(fill.length)] + ' ';
-            } while (out.length <= len)
-            return out;
+            out = fill.map(e => (e + ' ').repeat(conf.x)).join(' ');
+
+            return out.slice(0, 500);
         }
     },
     shuffleInvisibleChar: {
-        help: 'shuffle invisible character',
+        help: 'Shuffle invisible character with message',
         props: {
             len: 150,
             charLen: 8,
             rand: 1,
         },
         func: function (msg: string, conf: { len: number, charLen: number, rand: boolean }): string {
+            if (msg.length > 499) return msg;
             msg = msg.trim();
             if (!msg.length) return '';
             let out = '',
@@ -109,7 +110,7 @@ const FUNCTIONS = {
                 do {
                     out += fill[randNumb(fill.length)] + ' ' + invisibleChar.repeat(randNumb(12, 4)) + ' ';
                 } while (out.length <= len)
-                return out;
+                return out.slice(0, 500);
             }
         },
     },
@@ -119,50 +120,45 @@ document.addEventListener('alpine:init', async function () {
 
     Alpine.data('_main_', function (this: any) {
         return {
+            // local storage variables
             settings: this.$persist(this.$store.settings || DEFAULT_SETTINGS),
             pastasData: this.$persist(this.$store.pastasData || DEFAULT_PASTAS_DATA) as PastasData,
+            selFunc: this.$persist({
+                SELECTED: 'shuffleInvisibleChar',
+                FUNCTIONS: FUNCTIONS,
+            }) as string,
+            // booleans
             settingsModalShow: false as boolean,
             mainWindowShow: DEBUG as boolean,
             emotesMenuShow: false as boolean,
             saved: false as boolean,
             error: false as boolean,
-            errorMsg: null as null | string,
-            streamerModel: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1) as string,
+            functionsSettingsShow: false as boolean,
             streamerExists: true as boolean,
+
+            errorMsg: null as null | string,
+            //models
+            streamerModel: LOCAL_DEBUG ? 'forsen' : document.location.pathname.slice(1).replace(/\/.*/g, '') as string,
             textareaModel: '' as string,
             searchByPastaModel: '' as string,
-            functionsSettingsShow: false as boolean,
-            selFunc: this.$persist({
-                SELECTED: 'shuffleInvisibleChar',
-                FUNCTIONS: FUNCTIONS,
-            }) as string,
-            searchRegExp(): RegExp {
-                return new RegExp(this.searchByPastaModel, 'gmi')
-            },
-            async isLoadingEmotes(): Promise<void> {
-                if (this.streamerExists) {
-                    let tempEmotes: EmotesData[] = await (new FetchAllEmotesData(this.$store)).loadTempEmotes(this.streamerModel);
-                    tempEmotes = [].concat(...Object.values(tempEmotes));
-                    let _regexpTempEmotes = new RegExp(
-                        tempEmotes.map((e) => e.name.__createEmoteRegExp()).join('|')
-                        , 'g'
-                    )
-                    if (_regexpTempEmotes.source === '(?:)') _regexpTempEmotes = /\b\B/;
-                    globalThis.tmp = { emoteData: tempEmotes, emoteRegex: _regexpTempEmotes }
-                } else this.showError('User with this name does not exist. You should provide real logins to save.');
-                return;
-            },
+
             init() {
+
                 let settingsKeys = Object.keys(this.settings);
-                let __defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
-                if (!__defaultSettingsKeys.every(key => settingsKeys.includes(key))) {
-                    __defaultSettingsKeys.forEach(key => {
+                let defaultSettingsKeys = Object.keys(DEFAULT_SETTINGS);
+
+                let defaultFuncs = Object.keys(FUNCTIONS);
+                let funcs = Object.keys(this.selFunc.FUNCTIONS);
+
+
+                if (!defaultSettingsKeys.every(key => settingsKeys.includes(key))) {
+                    defaultSettingsKeys.forEach(key => {
                         if (!this.settings[key]) {
                             log(key + ' was added after update')
                             this.settings[key] = DEFAULT_SETTINGS[key];
                         }
                     })
-                } else if (!settingsKeys.every(key => __defaultSettingsKeys.includes(key))) {
+                } else if (!settingsKeys.every(key => defaultSettingsKeys.includes(key))) {
                     settingsKeys.forEach(key => {
                         if (!DEFAULT_SETTINGS[key]) {
                             log(key + ' was deleted after update')
@@ -170,6 +166,17 @@ document.addEventListener('alpine:init', async function () {
                         }
                     });
                 };
+                if (
+                    defaultFuncs.length !== funcs.length
+                ) {
+                    defaultFuncs.forEach(func => {
+                        if (!funcs.includes(func)) {
+                            console.log(func)
+                            this.selFunc.FUNCTIONS[func] = FUNCTIONS[func];
+                        }
+                    })
+                }
+
 
                 Alpine.store('settings', this.settings);
                 Alpine.store('pastasData', this.pastasData);
@@ -182,12 +189,29 @@ document.addEventListener('alpine:init', async function () {
                     this.functionsSettingsShow = false;
                 });
             },
+            searchRegExp(): RegExp {
+                return new RegExp(this.searchByPastaModel, 'gmi')
+            },
+            async isLoadingEmotes(): Promise<void> {
+                if (this.streamerExists) {
+                    let tempEmotes: EmotesData[] = await (new FetchAllEmotesData(this.$store)).loadTempEmotes(this.streamerModel);
+                    tempEmotes = [].concat(...Object.values(tempEmotes));
+                    let _regexpTempEmotes = new RegExp(
+                        tempEmotes.map((e) => e.name.__createEmoteRegExp()).join('|')
+                        , 'g'
+                    )
+                    if (_regexpTempEmotes.source === '(?:)') _regexpTempEmotes = /\b\B/;
+                    globalThis.tmpEmotes = { emoteData: tempEmotes, emoteRegex: _regexpTempEmotes }
+                } else this.showError('User with this name does not exist. You should provide real logins to save.');
+                return;
+            },
             async savePasta(pasta: { name: string, msg: string }, streamer: string, livePreview: string) {
                 try {
                     if (!pasta.msg.trim() || !streamer.trim()) {
                         this.showError('No pasta or streamer found.');
                         return false;
                     }
+                    pasta.msg = pasta.msg.trim().replace(/\n/g, ' ');
                     streamer = streamer.toLowerCase();
                     if (this.pastasData.streamers.includes(streamer) || await this.twitchUserExists(streamer)) {
                         if (!pasta.name.trim())
@@ -195,12 +219,12 @@ document.addEventListener('alpine:init', async function () {
 
                         if (!this.pastasData.streamers.includes(streamer)) {
                             this.pastasData.streamers.push(streamer);
+                            globalThis.__EMOTES__.init();
                         }
-                        function save_(pasta) {
+                        function save_(pasta: { name: string, msg: string }) {
                             return {
                                 name: pasta.name,
                                 msg: pasta.msg,
-                                parsedCache: livePreview, //globalThis.__EMOTES__.parseEmotes(pasta.msg, streamer),
                                 uid: generateUID(),
                             }
                         }
@@ -209,7 +233,8 @@ document.addEventListener('alpine:init', async function () {
                             : this.pastasData.context[streamer] = [save_(pasta)];
 
                         this.showSaved();
-                    } else {
+                    }
+                    else {
                         this.showError('User with this name does not exist. You should provide real logins to save.')
                         return false;
                     }
@@ -253,10 +278,14 @@ document.addEventListener('alpine:init', async function () {
             },
             deletePasta(streamer: string, uid: string): void {
                 let ctx = this.pastasData.context[streamer];
-                if (this.pastasData.context[streamer].length < 2)
+                if (this.pastasData.context[streamer].length < 2) {
                     this.deleteStreamer(streamer);
-                else
+                }
+                else {
+                    ifDebug(console.time, 'splice data');
                     this.pastasData.context[streamer].splice(ctx.map(e => e.uid).indexOf(uid), 1);
+                    ifDebug(console.timeEnd, 'splice data');
+                }
 
             },
             deleteStreamer(streamer: string, pr: boolean = false): boolean {
@@ -279,7 +308,9 @@ document.addEventListener('alpine:init', async function () {
             async twitchUserExists(streamer: string): Promise<boolean> {
                 let url = `https://tw-emotes-api.onrender.com/user?name=${streamer}`;
                 try {
-                    return !(await (await fetch(url)).json()).error
+                    this.streamerExists = !(await (await fetch(url)).json()).error
+
+                    return this.streamerExists;
                 } catch (err) { log.error(err); }
             },
             _binds_: {
@@ -344,16 +375,17 @@ document.addEventListener('alpine:init', async function () {
                 }
             },
             changeBtnEmote(self: any): Element | Error {
-                const $copyPastaBtn: Element | Error = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') || document.createElement('button');
-                let btnEmote: string | Error;
+                const $copyPastaBtn: Element | Error = document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca') ?? document.createElement('button');
+                let btnEmote: string | Error, $underChatGUI: Element = document.querySelector('.Layout-sc-1xcs6mc-0.XTygj.chat-input__buttons-container > .Layout-sc-1xcs6mc-0.hOyRCN');
 
-                if (!$copyPastaBtn.parentNode && LOCAL_DEBUG) {
+                if (!($copyPastaBtn?.parentElement?.className == 'Layout-sc-1xcs6mc-0 hOyRCN') || LOCAL_DEBUG) {
                     $copyPastaBtn.id = 'cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca';
-                    $copyPastaBtn.className = 'cp-btn'
-                    document.body.appendChild($copyPastaBtn);
+                    LOCAL_DEBUG
+                        ? document.body.appendChild($copyPastaBtn)
+                        : $underChatGUI.insertBefore($copyPastaBtn, $underChatGUI.firstChild)
                 }
 
-                document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca').removeAttribute('onclick');
+                document.querySelector('button#cp-155de7a2-c3d2-4d24-84b4-64cf22efb3ca')?.removeAttribute('onclick');
 
                 const $newCopyPastaBtn = $copyPastaBtn.cloneNode(true);
 
@@ -386,6 +418,7 @@ document.addEventListener('alpine:init', async function () {
             },
             createEmote: globalThis.__createEmote,
             parseEmotes(msg: string, streamer: string, conf = { tmp: false, url: false }): string {
+                ifDebug(log, msg, streamer, conf)
                 if (!msg) return;
                 try {
                     if (conf.url) {
@@ -400,12 +433,13 @@ document.addEventListener('alpine:init', async function () {
                     }
 
                     msg = msg.replace(/(\<[a-z]{1}|\<\/)/gmi, e => [...e].join('&#13;'));
+                    msg = msg.trim().replace(/\n/g, ' ') + ' ';
 
                     if (conf.tmp && !this.$store.pastasData.streamers.includes(streamer) && globalThis.__MAIN__.streamerExists)
                         return msg
                             .__parseEmotes(
                                 this._regexpGlobalEmotes, this.allGlobalEmotes,
-                                globalThis?.tmp?.emoteRegex, globalThis?.tmp?.emoteData
+                                globalThis?.tmpEmotes?.emoteRegex, globalThis?.tmpEmotes?.emoteData
                             );
 
                     else if (streamer == void 0 || !this.$store.pastasData.streamers.includes(streamer))

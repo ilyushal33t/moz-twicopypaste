@@ -1,10 +1,12 @@
 {
   "manifest_version": 2,
   "name": "Copium",
-  "version": "1.0",
+  "version": "1.0.1.3",
   "description": "Simple save your twitch pastes and paste them LUL.",
   "icons": {
-    "48": "icons/favicon.ico"
+    "24": "icons/favicon.ico",
+    "48": "icons/favicon.ico",
+    "96": "icons/favicon.ico"
   },
   "content_scripts": [
     {
@@ -12,6 +14,8 @@
         "*://*.twitch.tv/*"
       ],
       "js": [
+        "dist/css.js",
+        "dist/html.js",
         "copium.js"
       ]
     }

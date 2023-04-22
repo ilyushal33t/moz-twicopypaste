@@ -108,7 +108,7 @@
                                 <input x-ref="streamer" name="streamer" class="input-text-4a3582a6 input" type="text"
                                     x-model.debounce="streamerModel" required />
                                 <span x-show="0"
-                                    x-effect='streamerExists = await twitchUserExists(streamerModel); isLoadingEmotes()'></span>
+                                    x-effect='await twitchUserExists(streamerModel); isLoadingEmotes()'></span>
                                 <input x-show="0" @click="emotesMenuShow = !emotesMenuShow"
                                     class="input-button-4a3582a6 input" type="button" value="Emotes" />
                             </div>
@@ -159,7 +159,8 @@
 
                             <div x-show="textareaModel" x-data="emotes" style="position: relative;">
                                 <br>
-                                <div x-cloak @click="await saveToClipboard($refs.textarea.value)"
+                                <div x-cloak
+                                    @click="await saveToClipboard($refs.textarea.value.trim().replace(/\n/g,' '));"
                                     class="cp-msg-preview-8ee8c5b1 live-preview">
                                     <div class="user_container_087b8fa9"><span class="username_preview_37582eb4"
                                             x-text="$store.settings.username.val"></span><span
@@ -173,7 +174,7 @@
                     </div>
                     <div style="display:flex;justify-content:center;align-items:center;">
                         <input class="search-by-pastaname-input-14a50f55 input" type="text" name="search-by-pastaname"
-                            placeholder="Search by pasta name..." x-bind="_binds_.searchByPastaname" />
+                            placeholder="Search..." x-bind="_binds_.searchByPastaname" />
                     </div>
                     <hr>
                 </div>
@@ -214,7 +215,7 @@
                                                             x-text="$store.settings.username.val"></span><span
                                                             style="margin-right: 3px;">:</span>
                                                     </div><span class="emote_container_2fdf6c3d"
-                                                        x-html="ctx.parsedCache || parseEmotes(ctx.msg, active)"></span>
+                                                        x-html="parseEmotes(ctx.msg, active)"></span>
                                                 </div>
                                                 <div class="cp-close-a3243b52" @click="deletePasta(active, ctx.uid)">
                                                     <svg xmlns=" http://www.w3.org/2000/svg" fill="none"
@@ -250,7 +251,7 @@
                                         </div>
                                         <div @click="await saveToClipboard(ctx.msg)"
                                             style="margin-top: 8px; margin-bottom: 8px;"
-                                            x-html="'msg: ' + (ctx.parsedCache || parseEmotes(ctx.msg, s))">
+                                            x-html="'msg: ' + parseEmotes(ctx.msg, s)">
 
                                         </div>
                                         <div x-html="'raw msg: ' + ctx.msg">

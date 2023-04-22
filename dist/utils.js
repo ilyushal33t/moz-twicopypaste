@@ -23,7 +23,18 @@ class FetchAllEmotesData {
         await Promise.all(this.$store.pastasData.streamers
             .map(async (streamer) => {
             let channel = await getJSON(API_URL.channel, { name: streamer });
+            log.debug(channel);
+            if (channel.error)
+                return {
+                    user: {
+                        error: 'This user does not exist or got banned.',
+                    },
+                    emotes: {
+                        error: 'This user does not exist or got banned.',
+                    },
+                };
             let channelEmotes = await getJSON(API_URL.channelEmotes, { id: channel.id });
+            console.log(channelEmotes);
             return {
                 user: channel,
                 emotes: channelEmotes,
@@ -31,6 +42,9 @@ class FetchAllEmotesData {
         }))
             .then(data => {
             data.forEach((e, i) => {
+                if (e.user.error)
+                    return;
+                log.debug(e.user.error);
                 arr[i] = e;
             });
         });
@@ -50,7 +64,7 @@ class FetchAllEmotesData {
         this.channelsInfo = [];
         await this.fillStreamersInfoAsync(this.channelsInfo);
         this.channelsEmotesArr = this.channelsInfo
-            .map(e => ({ [e.user.broadcaster_login]: e.emotes }));
+            .map(e => ({ [e.user?.broadcaster_login ?? e.error]: e.emotes }));
         this.channelsEmotesObj = this.channelsEmotesArr.reduce((acc, v) => {
             const [k, reg] = Object.entries(v)[0];
             acc[k] = [].concat(...Object.values(reg));
@@ -58,11 +72,16 @@ class FetchAllEmotesData {
         }, {});
         this.mergedChannelsEmotes = objectValuesMerge(this.channelsEmotesArr);
         this._regexpChannelEmotes = this.channelsEmotesArr
-            .map(e => Object.entries(e)
-            .map(([k, v]) => ({
-            [k]: new RegExp(Object.values(v)
-                .map(e => e.map(e => e.name.__createEmoteRegExp()).join `|`).join(''), 'gm')
-        }))).reduce((acc, v) => {
+            .map(e => {
+            console.log(e);
+            if (e.error)
+                return;
+            return Object.entries(e)
+                .map(([k, v]) => ({
+                [k]: new RegExp(Object.values(v)
+                    .map(e => e.map(e => e.name.__createEmoteRegExp()).join `|`).join(''), 'gm')
+            }));
+        }).reduce((acc, v) => {
             const [k, reg] = Object.entries(v[0])[0];
             acc[k] = reg;
             return acc;
@@ -79,6 +98,13 @@ function log(msg) {
 }
 ;
 log.error = console.error;
+log.debug = console.debug;
+function ifDebug(f, ...args) {
+    if (!DEBUG)
+        return;
+    f(...args);
+}
+;
 function generateUID() {
     return 'cp-' + crypto.randomUUID();
 }
@@ -181,8 +207,13 @@ String.prototype.__createEmoteRegExp = function () {
 };
 String.prototype.__parseEmotes = function (regexGlobal, emotesGlobal, regexChannel, emotesChannel) {
     if (regexChannel && emotesChannel)
-        return this.split(` `).map(m => m.__parseEmote(regexGlobal, emotesGlobal)
-            ?.__parseEmote(regexChannel, emotesChannel)).map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join(` `).replace(/\#\#\# *[ ]/g, '');
+        return this.split(` `).map(m => {
+            if (regexGlobal.test(m))
+                return m.__parseEmote(regexGlobal, emotesGlobal);
+            else if (regexChannel.test(m))
+                return m.__parseEmote(regexChannel, emotesChannel);
+            return m;
+        }).map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join(` `).replace(/\#\#\# *[ ]/g, '');
     else
         return this.split(` `).map(m => m.__parseEmote(regexGlobal, emotesGlobal)).map(e => /\<\/?span\>/g.test(e) ? e + '###' : e).join(` `).replace(/\#\#\# *[ ]/g, '');
 };

@@ -18,6 +18,7 @@ declare global {
             twitch: EmotesData[],
             ffz: EmotesData[],
         }>,
+        error?: string,
     }
 
     /**
@@ -51,6 +52,7 @@ declare global {
         thumbnail_url: string,
         title: string,
         started_at: string,
+        error?: string,
     }
 
     interface EmotesData {
